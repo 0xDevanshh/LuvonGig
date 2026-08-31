@@ -1,0 +1,119 @@
+name: backend_v1
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend_v1/**', '.github/workflows/backend.yml']
+  pull_request:
+    paths: ['backend_v1/**', '.github/workflows/backend.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend_v1
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend_v1/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Fails the build on a known high/critical CVE. The tree is clean today;
+      # this is what keeps it that way.
+      - name: Audit
+        run: npm audit --audit-level=high
+
+  migrations:
+    name: migrations apply cleanly
+    runs-on: ubuntu-latest
+    # Runs against a throwaway Postgres, not Neon — a PR must never touch the
+    # real database. This proves the migrations apply from empty and that
+    # re-running them is a no-op.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: luvongig_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/luvongig_ci
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/luvongig_ci
+      JWT_SECRET: ci-only-secret-not-used-anywhere-real-000000
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend_v1/package-lock.json
+
+      - run: npm ci
+
+      - name: Apply migrations from empty
+        run: npm run migrate
+
+      - name: Re-run must be a no-op
+        run: |
+          output=$(npm run migrate --silent)
+          echo "$output"
+          echo "$output" | grep -q "Already up to date" \
+            || { echo "::error::Migrations are not idempotent"; exit 1; }
+
+      - name: No pending or modified migrations
+        run: |
+          migration_status=$(npm run migrate:status --silent)
+          echo "$migration_status"
+          if echo "$migration_status" | grep -qE "pending|MODIFIED|MISSING"; then
+            echo "::error::Migration drift — a file was edited after being applied, or is unapplied"
+            exit 1
+          fi
+
+      - name: Server boots and reports ready
+        run: |
+          npm run build
+          node dist/server.js & pid=$!
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -fsS http://127.0.0.1:4000/health/ready >/dev/null 2>&1; then
+              echo "ready after ${i}s"
+              curl -s http://127.0.0.1:4000/health/ready
+              kill $pid
+              exit 0
+            fi
+          done
+          echo "::error::Server never became ready"
+          kill $pid 2>/dev/null
+          exit 1

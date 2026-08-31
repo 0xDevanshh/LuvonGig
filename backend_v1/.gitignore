@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+# Canister exports produced during migration (may contain PII / password hashes)
+exports/
+*.export.json
+
+*.log
+.DS_Store
+coverage/
