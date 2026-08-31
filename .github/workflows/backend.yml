@@ -101,6 +101,13 @@ jobs:
             exit 1
           fi
 
+      # Asserts the schema actually enforces its invariants (balanced booking
+      # amounts, one review per booking, one team per hackathon, webhook
+      # dedup...). These need a database, so they run here rather than in the
+      # hermetic unit-test job.
+      - name: Schema invariants
+        run: npx vitest run src/db/schema.test.ts
+
       - name: Server boots and reports ready
         run: |
           npm run build
