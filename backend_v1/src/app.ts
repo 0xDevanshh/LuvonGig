@@ -9,6 +9,10 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './modules/health/routes.js';
 import { authRouter } from './modules/auth/routes.js';
 import { usersRouter } from './modules/users/routes.js';
+import { servicesRouter, packagesRouter } from './modules/services/routes.js';
+import { bookingsRouter, stagesRouter } from './modules/bookings/routes.js';
+import { compatRouter } from './modules/bookings/compat.js';
+import { statsRouter } from './modules/stats/routes.js';
 
 export function createApp() {
   const app = express();
@@ -45,10 +49,18 @@ export function createApp() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/users', usersRouter);
+  app.use('/api/services', servicesRouter);
+  app.use('/api/packages', packagesRouter);
+  app.use('/api/bookings', bookingsRouter);
+  app.use('/api/stages', stagesRouter);
+  app.use('/api/stats', statsRouter);
+  // Collection-level shapes the old routes used (booking id in query or body).
+  // Deleted in Phase 7 once callers move to the path-based routes.
+  app.use('/api/compat', compatRouter);
 
   // Later phases mount here:
-  //   app.use('/api/services', servicesRouter);
-  //   app.use('/api/bookings', bookingsRouter);
+  //   app.use('/api/job-posts', jobsRouter);      // Phase 4
+  //   app.use('/api/payments', paymentsRouter);   // Phase 5
 
   app.use(notFoundHandler);
   app.use(errorHandler);
