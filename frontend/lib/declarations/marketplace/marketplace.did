@@ -1,0 +1,312 @@
+type UserId = text;
+type TimelineEventType = 
+ variant {
+   BookingCancelled;
+   BookingCompleted;
+   BookingConfirmed;
+   BookingCreated;
+   ClientReviewed;
+   DisputeRaised;
+   DisputeResolved;
+   FreelancerReviewed;
+   PaymentCompleted;
+   StageApproved;
+   StageCreated;
+   StageRejected;
+   StageUpdated;
+   WorkCompleted;
+   WorkStarted;
+ };
+type TimelineEvent = 
+ record {
+   booking_id: BookingId;
+   created_by: UserId;
+   description: text;
+   event_id: text;
+   event_type: TimelineEventType;
+   metadata: opt vec record {
+                       text;
+                       text;
+                     };
+   timestamp: int;
+ };
+type StageId = text;
+type SortOption = 
+ record {
+   direction: variant {
+                Ascending;
+                Descending;
+              };
+   field: text;
+ };
+type ServiceStatus = 
+ variant {
+   Active;
+   Deleted;
+   Paused;
+ };
+type ServiceId = text;
+type ServiceFilter = 
+ record {
+   category: opt text;
+   delivery_time: opt record {
+                        max_days: nat;
+                        min_days: nat;
+                      };
+   freelancer_id: opt UserId;
+   price_range: opt record {
+                      max_e8s: nat64;
+                      min_e8s: nat64;
+                    };
+   rating: opt float64;
+   sub_category: opt text;
+   tags: vec text;
+ };
+type Service = 
+ record {
+   cover_image_url: opt text;
+   created_at: int;
+   delivery_time_days: nat;
+   description: text;
+   freelancer_id: UserId;
+   main_category: text;
+   portfolio_images: vec text;
+   review_count: nat;
+   service_id: ServiceId;
+   starting_from_e8s: nat64;
+   status: ServiceStatus;
+   sub_category: text;
+   tags: vec text;
+   title: text;
+   total_rating: float64;
+   updated_at: int;
+   whats_included: text;
+ };
+type Result_9 = 
+ variant {
+   err: ApiError;
+   ok: BookingResponse;
+ };
+type Result_8 = 
+ variant {
+   err: text;
+   ok: BookingResponse;
+ };
+type Result_7 = 
+ variant {
+   err: ApiError;
+   ok: text;
+ };
+type Result_6 = 
+ variant {
+   err: text;
+   ok: PackageId;
+ };
+type Result_5 = 
+ variant {
+   err: text;
+   ok: ServiceId;
+ };
+type Result_4 = 
+ variant {
+   err: ApiError;
+   ok: Booking;
+ };
+type Result_3 = 
+ variant {
+   err: ApiError;
+   ok: record {
+         text;
+         text;
+       };
+ };
+type Result_2 = 
+ variant {
+   err: ApiError;
+   ok: vec Booking;
+ };
+type Result_1 = 
+ variant {
+   err: ApiError;
+   ok;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok;
+ };
+type PaymentStatus = 
+ variant {
+   Disputed;
+   HeldInEscrow;
+   Pending;
+   Refunded;
+   Released;
+ };
+type PaginationParams = 
+ record {
+   limit: nat;
+   offset: nat;
+ };
+type PackageId = text;
+type Package = 
+ record {
+   created_at: int;
+   delivery_time_days: nat;
+   delivery_timeline: text;
+   description: text;
+   features: vec text;
+   is_active: bool;
+   name: text;
+   package_id: PackageId;
+   price_e8s: nat64;
+   revisions: nat;
+   service_id: ServiceId;
+ };
+type BookingStatus = 
+ variant {
+   Active;
+   Cancelled;
+   Completed;
+   InDispute;
+   Pending;
+ };
+type BookingResponse = 
+ record {
+   amount_e8s: nat64;
+   booking_id: BookingId;
+   escrow_account: text;
+   ledger_block: opt nat64;
+ };
+type BookingId = text;
+type Booking = 
+ record {
+   base_amount_e8s: nat64;
+   booking_confirmed_at: opt int;
+   booking_confirmed_at_readable: text;
+   booking_id: BookingId;
+   client_id: UserId;
+   client_name: text;
+   client_rating: opt float64;
+   client_review: opt text;
+   client_reviewed_at: opt int;
+   created_at: int;
+   created_at_readable: text;
+   currency: text;
+   current_milestone: opt StageId;
+   deadline: int;
+   delivery_days: nat;
+   delivery_deadline: int;
+   delivery_deadline_readable: text;
+   description: text;
+   discount_amount_e8s: nat64;
+   dispute_id: opt text;
+   escrow_amount_e8s: nat64;
+   freelancer_id: UserId;
+   freelancer_name: text;
+   freelancer_rating: opt float64;
+   freelancer_review: opt text;
+   freelancer_reviewed_at: opt int;
+   ledger_deposit_block: opt nat64;
+   milestones: vec StageId;
+   package_description: text;
+   package_features: vec text;
+   package_id: PackageId;
+   package_revisions: nat;
+   package_tier: text;
+   package_title: text;
+   payment_completed_at: opt int;
+   payment_completed_at_readable: text;
+   payment_id: text;
+   payment_method: text;
+   payment_status: PaymentStatus;
+   platform_fee_e8s: nat64;
+   promo_code: opt text;
+   requirements: vec text;
+   service_id: ServiceId;
+   special_instructions: text;
+   status: BookingStatus;
+   time_remaining_hours: nat;
+   title: text;
+   total_amount_e8s: nat64;
+   transaction_id: text;
+   updated_at: int;
+   upsells: vec record {
+                  category: text;
+                  id: text;
+                  name: text;
+                  price_e8s: nat64;
+                };
+   work_completed_at: opt int;
+   work_started_at: opt int;
+ };
+type ApiError = 
+ variant {
+   AlreadyExists: text;
+   BookingNotFunded;
+   InsufficientFunds;
+   InvalidInput: text;
+   InvalidStatus: text;
+   LedgerError: text;
+   NotFound: text;
+   PaymentFailed: text;
+   StageNotApproved;
+   Unauthorized: text;
+ };
+service : {
+  addBookingReview: (BookingId, UserId, float64, text, bool) -> (Result_1);
+  bookPackage: (UserId, text, PackageId, text, text) -> (Result_9);
+  createBooking: (ServiceId, PackageId, text, text, vec text, int) ->
+   (Result_8);
+  createChatRelationshipFromBooking: (BookingId, UserId, opt text,
+   opt text) -> (Result_7);
+  createPackage: (ServiceId, text, text, nat64, nat, text, nat, vec text) ->
+   (Result_6);
+  createPackageForBooking: (ServiceId, PackageId, text, text, nat64, 
+   nat, text, nat, vec text) -> (Result_6);
+  createService: (UserId, text, text, text, text, text, nat, nat64,
+   vec text) -> (Result_5);
+  createServiceForBooking: (ServiceId, text, text, text, text, text, 
+   text, nat, nat64, vec text) -> (Result_5);
+  deleteService: (ServiceId) -> (Result);
+  getActiveBookingChatsForUser: (text) -> (Result_2) query;
+  getAllServices: () -> (vec Service) query;
+  getBooking: (BookingId, UserId) -> (opt Booking);
+  getBookingById: (BookingId) -> (Result_4) query;
+  getBookingTimeline: (BookingId) -> (vec TimelineEvent) query;
+  getChatParticipantsForBooking: (BookingId) -> (Result_3) query;
+  getMarketplaceStats: () ->
+   (record {
+      active_bookings: nat;
+      active_services: nat;
+      total_bookings: nat;
+      total_revenue_e8s: nat64;
+      total_services: nat;
+    }) query;
+  getPackagesByServiceId: (ServiceId) -> (vec Package) query;
+  getService: (ServiceId) -> (opt Service);
+  getServicesByFreelancer: (UserId, PaginationParams) -> (vec Service) query;
+  getUserBookings: (UserId, variant {
+                              Client;
+                              Freelancer;
+                            }, PaginationParams) -> (vec Booking) query;
+  listBookingsForClient: (UserId, opt BookingStatus, nat, nat) ->
+   (Result_2) query;
+  listBookingsForFreelancer: (UserId, opt BookingStatus, nat, nat) ->
+   (Result_2) query;
+  searchServices: (ServiceFilter, SortOption, PaginationParams) ->
+   (vec Service) query;
+  submitReview: (BookingId, UserId, float64, text) -> (Result);
+  updateBookingEnrichedData: (BookingId, text, text, text, text, text, 
+   text, vec record {
+               category: text;
+               id: text;
+               name: text;
+               price_e8s: nat64;
+             }, opt text, nat64, opt nat64) -> (Result_1);
+  updateBookingStatus: (BookingId, UserId, BookingStatus) -> (Result);
+  updateBookingStatusWithTimeline: (BookingId, UserId, BookingStatus,
+   text) -> (Result_1);
+  updateService: (ServiceId, text, text, text, nat, nat64, vec text) ->
+   (Result);
+}

@@ -1,0 +1,1210 @@
+{
+  "hackathons": [
+    {
+      "hackathon_id": "mock_1761180973575_test_hackathon",
+      "organizer_email": "test@example.com",
+      "title": "Test Hackathon",
+      "tagline": "A test hackathon for development",
+      "description": "This is a test hackathon created for development and testing purposes.",
+      "theme": "Technology",
+      "mode": {
+        "Online": null
+      },
+      "location": "Virtual",
+      "start_date": "2024-12-31T00:00:00.000Z",
+      "end_date": "2025-01-01T00:00:00.000Z",
+      "registration_start": "2024-12-01T00:00:00.000Z",
+      "registration_end": "2024-12-30T23:59:59.000Z",
+      "min_team_size": 1,
+      "max_team_size": 4,
+      "prize_pool": "1000",
+      "rules": "Standard hackathon rules apply",
+      "status": {
+        "Upcoming": null
+      },
+      "banner_image": "",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1",
+          "position": "1st",
+          "title": "First Prize",
+          "description": "First place prize",
+          "amount": 1000,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [],
+      "schedule": [],
+      "tags": [
+        "test",
+        "hackathon"
+      ],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": ""
+        }
+      ],
+      "created_at": 1761180973575000000,
+      "updated_at": 1761180973575000000
+    },
+    {
+      "hackathon_id": "mock_1761181148101_wh7acqi26",
+      "organizer_email": "test2@example.com",
+      "banner_image": "",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1",
+          "position": "1st",
+          "title": "First Prize",
+          "description": "First place prize",
+          "amount": 1000,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [],
+      "schedule": [],
+      "tags": [
+        "test",
+        "hackathon"
+      ],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": ""
+        }
+      ],
+      "created_at": 1761181148101000000,
+      "updated_at": 1761181148101000000
+    },
+    {
+      "hackathon_id": "mock_1761181358139_vz8d4j9bb",
+      "organizer_email": "test@example.com",
+      "banner_image": "blob:http://localhost:3000/1387aa87-95af-4290-91af-792ba6bf317e",
+      "registration_fee": 1312312,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "17611813147529dqzapxax",
+          "position": "Best Design",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181316072hbhi69ajf",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "17611813170648cwc6z7rr0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064pz1m1dc441",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064amkzft1x42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181317064v4u3k2d4a3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064lab2n2jo64",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181317064qq92y431e5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064mcj62x4e36",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064vyn75o5dv7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181317064mjh6jfh1z8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "2312-12-31T03:12",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [
+        "asdadasas"
+      ],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdnasjn.com"
+        }
+      ],
+      "created_at": 1761181358139000000,
+      "updated_at": 1761181358139000000
+    },
+    {
+      "hackathon_id": "mock_1761181870696_xw3vss9iv",
+      "organizer_email": "test@example.com",
+      "banner_image": "blob:http://localhost:3001/03cd227e-0950-4540-b44d-cea2715b44b4",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761181870696000000,
+      "updated_at": 1761181870696000000
+    },
+    {
+      "hackathon_id": "mock_1761181885391_6os3lnwya",
+      "organizer_email": "test@example.com",
+      "banner_image": "blob:http://localhost:3001/03cd227e-0950-4540-b44d-cea2715b44b4",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761181885391000000,
+      "updated_at": 1761181885391000000
+    },
+    {
+      "hackathon_id": "mock_1761183425742_e8bxeiqga",
+      "organizer_email": "test@example.com",
+      "banner_image": "blob:http://localhost:3001/03cd227e-0950-4540-b44d-cea2715b44b4",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761183425742000000,
+      "updated_at": 1761183425742000000
+    },
+    {
+      "hackathon_id": "mock_1761183997685_uufq24z6i",
+      "organizer_email": "test@example.com",
+      "title": "dasdasd",
+      "tagline": "asdasda",
+      "description": "sdasdasdasdasd asd asd as  as",
+      "theme": "dasdas das da sd as das",
+      "mode": {
+        "Online": null
+      },
+      "location": "sdasdasdas",
+      "start_date": "31231-12-31T14:31",
+      "end_date": "31231-03-12T14:43",
+      "registration_start": "131231-03-13T14:31",
+      "registration_end": "228888-12-12T02:03",
+      "min_team_size": 1,
+      "max_team_size": 4,
+      "prize_pool": "0",
+      "rules": "",
+      "status": {
+        "Upcoming": null
+      },
+      "banner_image": "blob:http://localhost:3001/03cd227e-0950-4540-b44d-cea2715b44b4",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761183997685000000,
+      "updated_at": 1761183997685000000
+    },
+    {
+      "hackathon_id": "mock_1761184193480_mgupag023",
+      "organizer_email": "t3chnobromo@gmail.com",
+      "title": "dasdasd",
+      "tagline": "asdasda",
+      "description": "sdasdasdasdasd asd asd as  as",
+      "theme": "dasdas das da sd as das",
+      "mode": {
+        "Online": null
+      },
+      "location": "sdasdasdas",
+      "start_date": "31231-12-31T14:31",
+      "end_date": "31231-03-12T14:43",
+      "registration_start": "131231-03-13T14:31",
+      "registration_end": "228888-12-12T02:03",
+      "min_team_size": 1,
+      "max_team_size": 4,
+      "prize_pool": "0",
+      "rules": "",
+      "status": {
+        "Upcoming": null
+      },
+      "banner_image": "blob:http://localhost:3001/03cd227e-0950-4540-b44d-cea2715b44b4",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761184193480000000,
+      "updated_at": 1761184193480000000
+    },
+    {
+      "hackathon_id": "mock_1761184379811_narhze0ug",
+      "organizer_email": "t3chnobromo@gmail.com",
+      "title": "dasdasd",
+      "tagline": "asdasda",
+      "description": "sdasdasdasdasd asd asd as  as",
+      "theme": "dasdas das da sd as das",
+      "mode": {
+        "Online": null
+      },
+      "location": "sdasdasdas",
+      "start_date": "31231-12-31T14:31",
+      "end_date": "31231-03-12T14:43",
+      "registration_start": "131231-03-13T14:31",
+      "registration_end": "228888-12-12T02:03",
+      "min_team_size": 1,
+      "max_team_size": 4,
+      "prize_pool": "0",
+      "rules": "",
+      "status": {
+        "Upcoming": null
+      },
+      "banner_image": "blob:http://localhost:3001/e426b855-1168-4868-96c4-cadf1bc29e5b",
+      "registration_fee": 0,
+      "max_participants": 100,
+      "prizes": [
+        {
+          "id": "1761181854036tddlxa1p8",
+          "position": "1st Place",
+          "title": "",
+          "description": "",
+          "amount": 0,
+          "currency": "USD",
+          "type": "cash"
+        }
+      ],
+      "judges": [
+        {
+          "id": "1761181855258zftihia3t",
+          "name": "Dr. Sarah Chen",
+          "email": "",
+          "bio": "AI Research Scientist with 10+ years in machine learning and neural networks.",
+          "expertise": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "Data Science"
+          ],
+          "avatar": "",
+          "status": "pending"
+        }
+      ],
+      "schedule": [
+        {
+          "id": "1761181856498japhsycuw0",
+          "title": "Opening Ceremony & Welcome",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "opening",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "17611818564989ce7ylx8b1",
+          "title": "Ideation & Team Formation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498yp8hahcs42",
+          "title": "Lunch Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "17611818564989no4l4r5p3",
+          "title": "Technical Workshop",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "workshop",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498u563wghwj4",
+          "title": "Dinner Break",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "break",
+          "speakers": [],
+          "isRequired": false
+        },
+        {
+          "id": "1761181856498i3tw7odkp5",
+          "title": "Project Presentations",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "presentation",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498m1eriadpr6",
+          "title": "Judging & Deliberation",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "judging",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498te4ugrvct7",
+          "title": "Awards Ceremony",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "awards",
+          "speakers": [],
+          "isRequired": true
+        },
+        {
+          "id": "1761181856498iedtdxv7f8",
+          "title": "Closing Remarks",
+          "description": "",
+          "startTime": "",
+          "endTime": "",
+          "date": "31231-12-31T14:31",
+          "location": "",
+          "type": "closing",
+          "speakers": [],
+          "isRequired": true
+        }
+      ],
+      "tags": [],
+      "social_links": [
+        {
+          "platform": "x.com",
+          "url": "https://dasdjasjd.coim"
+        }
+      ],
+      "created_at": 1761184379811000000,
+      "updated_at": 1761184379811000000
+    }
+  ]
+}

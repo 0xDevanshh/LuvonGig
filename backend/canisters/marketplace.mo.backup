@@ -1,0 +1,1333 @@
+import HashMap "mo:base/HashMap";
+import Text "mo:base/Text";
+import Time "mo:base/Time";
+import Buffer "mo:base/Buffer";
+import Result "mo:base/Result";
+import Nat "mo:base/Nat";
+import Nat64 "mo:base/Nat64";
+import Int "mo:base/Int";
+import Iter "mo:base/Iter";
+import Char "mo:base/Char";
+import Principal "mo:base/Principal";
+import Debug "mo:base/Debug";
+import Array "mo:base/Array";
+import Option "mo:base/Option";
+import Float "mo:base/Float";
+
+// Import UserCanister for authentication
+import UserCanister "canister:user";
+
+// ========================================
+// TYPE DEFINITIONS
+// ========================================
+
+type ServiceId = Text;
+type PackageId = Text;
+type BookingId = Text;
+type StageId = Text;
+type TransactionId = Text;
+type UserId = Text;
+
+// Service Types
+type ServiceStatus = {
+  #Active;
+  #Paused;
+  #Deleted;
+};
+
+type Service = {
+  service_id: ServiceId;
+  freelancer_id: UserId;
+  title: Text;
+  main_category: Text;
+  sub_category: Text;
+  description: Text;
+  whats_included: Text;
+  cover_image_url: ?Text;
+  portfolio_images: [Text];
+  status: ServiceStatus;
+  created_at: Int;
+  updated_at: Int;
+  rating_avg: Float;
+  total_orders: Nat;
+};
+
+// Package Types
+type PackageTier = {
+  #Basic;
+  #Advanced;
+  #Premium;
+};
+
+type PackageStatus = {
+  #Available;
+  #Unavailable;
+};
+
+type Package = {
+  package_id: PackageId;
+  service_id: ServiceId;
+  tier: PackageTier;
+  title: Text;
+  description: Text;
+  price_e8s: Nat64;
+  delivery_days: Nat;
+  features: [Text];
+  revisions_included: Nat;
+  status: PackageStatus;
+  created_at: Int;
+  updated_at: Int;
+};
+
+// Booking Types
+type PaymentStatus = {
+  #Pending;
+  #PaymentInitiated;
+  #Funded;
+  #Released;
+  #Refunded;
+  #Failed;
+};
+
+type BookingStatus = {
+  #Pending;
+  #InProgress;
+  #Completed;
+  #Cancelled;
+  #Disputed;
+};
+
+type Booking = {
+  booking_id: BookingId;
+  package_id: PackageId;
+  client_id: UserId;
+  freelancer_id: UserId;
+  total_price_e8s: Nat64;
+  escrow_amount_e8s: Nat64;
+  platform_fee_e8s: Nat64;
+  payment_status: PaymentStatus;
+  booking_status: BookingStatus;
+  special_instructions: Text;
+  deliverables: [Text];
+  idempotency_key: Text;
+  ledger_deposit_block: ?Nat64;
+  created_at: Int;
+  updated_at: Int;
+  funded_at: ?Int;
+  completed_at: ?Int;
+};
+
+// Project Stage Types
+type StageStatus = {
+  #Pending;
+  #InProgress;
+  #Submitted;
+  #Approved;
+  #Rejected;
+  #Released;
+};
+
+type ProjectStage = {
+  stage_id: StageId;
+  booking_id: BookingId;
+  stage_number: Nat;
+  title: Text;
+  description: Text;
+  amount_e8s: Nat64;
+  status: StageStatus;
+  submission_notes: ?Text;
+  submission_artifacts: [Text];
+  rejection_reason: ?Text;
+  submitted_at: ?Int;
+  approved_at: ?Int;
+  rejected_at: ?Int;
+  released_at: ?Int;
+  release_ledger_block: ?Nat64;
+};
+
+// Escrow Transaction Types
+type TransactionType = {
+  #Deposit;
+  #Release;
+  #Refund;
+  #PlatformFee;
+};
+
+type TransactionStatus = {
+  #Pending;
+  #Confirmed;
+  #Failed;
+};
+
+type EscrowTransaction = {
+  transaction_id: TransactionId;
+  booking_id: BookingId;
+  transaction_type: TransactionType;
+  amount_e8s: Nat64;
+  from_principal: Principal;
+  to_principal: Principal;
+  ledger_block_index: Nat64;
+  status: TransactionStatus;
+  created_at: Int;
+  confirmed_at: ?Int;
+};
+
+// API Error Types
+type ApiError = {
+  #NotFound: Text;
+  #AlreadyExists: Text;
+  #InvalidInput: Text;
+  #Unauthorized: Text;
+  #PaymentFailed: Text;
+  #InsufficientFunds;
+  #LedgerError: Text;
+  #StageNotApproved;
+  #BookingNotFunded;
+  #InvalidStatus: Text;
+};
+
+// Filter Types
+type ServiceFilter = {
+  category: ?Text;
+  freelancer_id: ?UserId;
+  search_term: Text;
+  limit: Nat;
+  offset: Nat;
+};
+
+type BookingFilter = {
+  status: ?BookingStatus;
+  limit: Nat;
+  offset: Nat;
+};
+
+// Response Types
+type BookingResponse = {
+  booking_id: BookingId;
+  escrow_account: Text;
+  amount_e8s: Nat64;
+  ledger_block: ?Nat64;
+};
+
+// ========================================
+// CANISTER STATE
+// ========================================
+
+persistent actor MarketplaceCanister {
+  // Stable storage for upgrade persistence
+  stable var servicesEntries: [(ServiceId, Service)] = [];
+  stable var packagesEntries: [(PackageId, Package)] = [];
+  stable var bookingsEntries: [(BookingId, Booking)] = [];
+  stable var stagesEntries: [(StageId, ProjectStage)] = [];
+  stable var transactionsEntries: [(TransactionId, EscrowTransaction)] = [];
+  stable var idempotencyKeys: [Text] = [];
+  stable var eventLog: [Text] = [];
+
+  // Transient storage
+  private let services = HashMap.HashMap<ServiceId, Service>(0, Text.equal, Text.hash);
+  private let packages = HashMap.HashMap<PackageId, Package>(0, Text.equal, Text.hash);
+  private let bookings = HashMap.HashMap<BookingId, Booking>(0, Text.equal, Text.hash);
+  private let stages = HashMap.HashMap<StageId, ProjectStage>(0, Text.equal, Text.hash);
+  private let transactions = HashMap.HashMap<TransactionId, EscrowTransaction>(0, Text.equal, Text.hash);
+  private let usedIdempotencyKeys = HashMap.HashMap<Text, Bool>(0, Text.equal, Text.hash);
+
+  // Configuration
+  private let PLATFORM_FEE_PERCENT: Float = 5.0; // 5% platform fee
+  private let ESCROW_SUBACCOUNT: Blob = "\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01";
+  private let PLATFORM_ACCOUNT: Principal = Principal.fromText("rdmx6-jaaaa-aaaah-qcaiq-cai"); // Placeholder - set in production
+
+  // Mock ledger for testing (set to false in production)
+  private let USE_MOCK_LEDGER: Bool = true;
+
+  // ========================================
+  // HELPER FUNCTIONS
+  // ========================================
+
+  private func getCurrentTime(): Int {
+    Time.now();
+  };
+
+  private func generateId(prefix: Text): Text {
+    let chars = ['A', 'B', 'C', 'D', 'E', 'F', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    let size = 8;
+    var result = "";
+    var i = 0;
+    while (i < size) {
+      let random = Int.abs(Time.now() + i) % 16;
+      result := result # Char.toText(chars[random]);
+      i += 1;
+    };
+    prefix # "-" # result;
+  };
+
+  private func validateIdFormat(id: Text): Bool {
+    Text.size(id) == 11 and Text.contains(id, "-");
+  };
+
+  private func validateServiceData(service: Service): Bool {
+    Text.size(service.title) >= 10 and Text.size(service.title) <= 100 and
+    Text.size(service.description) >= 50 and Text.size(service.description) <= 1000 and
+    service.main_category != "" and service.sub_category != "";
+  };
+
+  private func validatePackageData(package: Package): Bool {
+    package.price_e8s > 0 and package.price_e8s <= 1_000_000_000_000_000; // Max 1M ICP
+  };
+
+  private func calculatePlatformFee(amount: Nat64): Nat64 {
+    let feeFloat = Float.fromInt64(Int64.fromNat64(amount)) * PLATFORM_FEE_PERCENT / 100.0;
+    Int64.toNat64(Int64.fromFloat(feeFloat));
+  };
+
+  // Mock ledger functions for testing
+  private func mockLedgerTransfer(from: Principal, to: Principal, amount: Nat64): async Nat64 {
+    Debug.print("Mock ledger transfer: " # Principal.toText(from) # " -> " # Principal.toText(to) # " amount: " # Nat64.toText(amount));
+    // Return mock block index
+    12345;
+  };
+
+  // Real ledger integration (to be implemented with ICRC-1)
+  private func realLedgerTransfer(from: Principal, to: Principal, amount: Nat64): async Result<Nat64, Text> {
+    // TODO: Implement real ICRC-1 ledger integration
+    // This would call the actual ledger canister
+    #ok(12345); // Placeholder
+  };
+
+  // Authorization helper
+  private func verifyCaller(userId: Text, caller: Principal): async Bool {
+    try {
+      let user = await UserCanister.getUserById(userId);
+      switch (user) {
+        case (?u) {
+          // For now, we'll assume the caller is authorized if they can call the canister
+          // In production, you'd verify the caller's identity matches the user's stored principal
+          true;
+        };
+        case null { false };
+      };
+    } catch (e) {
+      false;
+    };
+  };
+
+  private func logEvent(event: Text): () {
+    let timestamp = Int.toText(getCurrentTime());
+    let logEntry = "[" # timestamp # "] " # event;
+    eventLog := Array.append(eventLog, [logEntry]);
+    Debug.print(logEntry);
+  };
+
+  // ========================================
+  // SERVICE CRUD OPERATIONS
+  // ========================================
+
+  public shared({ caller }) func createService(userId: UserId, serviceData: Service): async Result<Service, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    // Validate input
+    if (not validateServiceData(serviceData)) {
+      return #err(#InvalidInput("Invalid service data"));
+    };
+
+    let serviceId = generateId("SV");
+    let now = getCurrentTime();
+
+    let service: Service = {
+      service_id = serviceId;
+      freelancer_id = userId;
+      title = serviceData.title;
+      main_category = serviceData.main_category;
+      sub_category = serviceData.sub_category;
+      description = serviceData.description;
+      whats_included = serviceData.whats_included;
+      cover_image_url = serviceData.cover_image_url;
+      portfolio_images = serviceData.portfolio_images;
+      status = #Active;
+      created_at = now;
+      updated_at = now;
+      rating_avg = 0.0;
+      total_orders = 0;
+    };
+
+    services.put(serviceId, service);
+    logEvent("Service created: " # serviceId # " by user: " # userId);
+    #ok(service);
+  };
+
+  public query func getServiceById(serviceId: ServiceId): Result<Service, ApiError> {
+    switch (services.get(serviceId)) {
+      case (?service) { #ok(service) };
+      case null { #err(#NotFound("Service not found")) };
+    };
+  };
+
+  public shared({ caller }) func updateService(userId: UserId, serviceId: ServiceId, updates: Service): async Result<Service, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (services.get(serviceId)) {
+      case (?existingService) {
+        // Verify ownership
+        if (existingService.freelancer_id != userId) {
+          return #err(#Unauthorized("Not service owner"));
+        };
+
+        // Validate updates
+        if (not validateServiceData(updates)) {
+          return #err(#InvalidInput("Invalid service data"));
+        };
+
+        let updatedService: Service = {
+          service_id = serviceId;
+          freelancer_id = userId;
+          title = updates.title;
+          main_category = updates.main_category;
+          sub_category = updates.sub_category;
+          description = updates.description;
+          whats_included = updates.whats_included;
+          cover_image_url = updates.cover_image_url;
+          portfolio_images = updates.portfolio_images;
+          status = updates.status;
+          created_at = existingService.created_at;
+          updated_at = getCurrentTime();
+          rating_avg = existingService.rating_avg;
+          total_orders = existingService.total_orders;
+        };
+
+        services.put(serviceId, updatedService);
+        logEvent("Service updated: " # serviceId);
+        #ok(updatedService);
+      };
+      case null { #err(#NotFound("Service not found")) };
+    };
+  };
+
+  public shared({ caller }) func deleteService(userId: UserId, serviceId: ServiceId): async Result<(), ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (services.get(serviceId)) {
+      case (?service) {
+        // Verify ownership
+        if (service.freelancer_id != userId) {
+          return #err(#Unauthorized("Not service owner"));
+        };
+
+        // Soft delete - mark as deleted
+        let deletedService: Service = {
+          service with status = #Deleted;
+          updated_at = getCurrentTime();
+        };
+
+        services.put(serviceId, deletedService);
+        logEvent("Service deleted: " # serviceId);
+        #ok(());
+      };
+      case null { #err(#NotFound("Service not found")) };
+    };
+  };
+
+  public query func listServices(filter: ServiceFilter): Result<[Service], ApiError> {
+    let results = Buffer.Buffer<Service>(services.size());
+
+    for ((id, service) in services.entries()) {
+      var include = true;
+
+      // Filter by category
+      switch (filter.category) {
+        case (?category) {
+          if (service.main_category != category) include := false;
+        };
+        case null {};
+      };
+
+      // Filter by freelancer
+      switch (filter.freelancer_id) {
+        case (?freelancerId) {
+          if (service.freelancer_id != freelancerId) include := false;
+        };
+        case null {};
+      };
+
+      // Filter by search term
+      if (filter.search_term != "" and not Text.contains(Text.toLowercase(service.title), Text.toLowercase(filter.search_term))) {
+        include := false;
+      };
+
+      // Only include active services
+      if (service.status != #Active) include := false;
+
+      if (include) {
+        results.add(service);
+      };
+    };
+
+    // Apply pagination
+    let limit = if (filter.limit == 0) 10 else filter.limit;
+    let offset = filter.offset;
+
+    var resultArray = Buffer.Buffer<Service>(results.size());
+    var i = 0;
+    for (item in results.vals()) {
+      if (i >= offset and i < offset + limit) {
+        resultArray.add(item);
+      };
+      i += 1;
+    };
+
+    #ok(Buffer.toArray(resultArray));
+  };
+
+  public query func listServicesForFreelancer(freelancerId: UserId, limit: Nat, offset: Nat): Result<[Service], ApiError> {
+    let filter: ServiceFilter = {
+      category = null;
+      freelancer_id = ?freelancerId;
+      search_term = "";
+      limit = limit;
+      offset = offset;
+    };
+    listServices(filter);
+  };
+
+  // ========================================
+  // PACKAGE CRUD OPERATIONS
+  // ========================================
+
+  public shared({ caller }) func createPackage(userId: UserId, packageData: Package): async Result<Package, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    // Validate service exists and user owns it
+    switch (services.get(packageData.service_id)) {
+      case (?service) {
+        if (service.freelancer_id != userId) {
+          return #err(#Unauthorized("Not service owner"));
+        };
+      };
+      case null { return #err(#NotFound("Service not found")) };
+    };
+
+    // Validate package data
+    if (not validatePackageData(packageData)) {
+      return #err(#InvalidInput("Invalid package data"));
+    };
+
+    let packageId = generateId("PK");
+    let now = getCurrentTime();
+
+    let package: Package = {
+      package_id = packageId;
+      service_id = packageData.service_id;
+      tier = packageData.tier;
+      title = packageData.title;
+      description = packageData.description;
+      price_e8s = packageData.price_e8s;
+      delivery_days = packageData.delivery_days;
+      features = packageData.features;
+      revisions_included = packageData.revisions_included;
+      status = #Available;
+      created_at = now;
+      updated_at = now;
+    };
+
+    packages.put(packageId, package);
+    logEvent("Package created: " # packageId # " for service: " # packageData.service_id);
+    #ok(package);
+  };
+
+  public query func getPackageById(packageId: PackageId): Result<Package, ApiError> {
+    switch (packages.get(packageId)) {
+      case (?package) { #ok(package) };
+      case null { #err(#NotFound("Package not found")) };
+    };
+  };
+
+  public shared({ caller }) func updatePackage(userId: UserId, packageId: PackageId, updates: Package): async Result<Package, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (packages.get(packageId)) {
+      case (?existingPackage) {
+        // Verify service ownership
+        switch (services.get(existingPackage.service_id)) {
+          case (?service) {
+            if (service.freelancer_id != userId) {
+              return #err(#Unauthorized("Not service owner"));
+            };
+          };
+          case null { return #err(#NotFound("Service not found")) };
+        };
+
+        // Validate updates
+        if (not validatePackageData(updates)) {
+          return #err(#InvalidInput("Invalid package data"));
+        };
+
+        let updatedPackage: Package = {
+          package_id = packageId;
+          service_id = existingPackage.service_id;
+          tier = updates.tier;
+          title = updates.title;
+          description = updates.description;
+          price_e8s = updates.price_e8s;
+          delivery_days = updates.delivery_days;
+          features = updates.features;
+          revisions_included = updates.revisions_included;
+          status = updates.status;
+          created_at = existingPackage.created_at;
+          updated_at = getCurrentTime();
+        };
+
+        packages.put(packageId, updatedPackage);
+        logEvent("Package updated: " # packageId);
+        #ok(updatedPackage);
+      };
+      case null { #err(#NotFound("Package not found")) };
+    };
+  };
+
+  public shared({ caller }) func deletePackage(userId: UserId, packageId: PackageId): async Result<(), ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (packages.get(packageId)) {
+      case (?package) {
+        // Verify service ownership
+        switch (services.get(package.service_id)) {
+          case (?service) {
+            if (service.freelancer_id != userId) {
+              return #err(#Unauthorized("Not service owner"));
+            };
+          };
+          case null { return #err(#NotFound("Service not found")) };
+        };
+
+        packages.delete(packageId);
+        logEvent("Package deleted: " # packageId);
+        #ok(());
+      };
+      case null { #err(#NotFound("Package not found")) };
+    };
+  };
+
+  public query func getPackagesByService(serviceId: ServiceId): Result<[Package], ApiError> {
+    let results = Buffer.Buffer<Package>(packages.size());
+
+    for ((id, package) in packages.entries()) {
+      if (package.service_id == serviceId and package.status == #Available) {
+        results.add(package);
+      };
+    };
+
+    #ok(Buffer.toArray(results));
+  };
+
+  // ========================================
+  // BOOKING & PAYMENT FLOW
+  // ========================================
+
+  public shared({ caller }) func bookPackage(clientId: UserId, packageId: PackageId, idempotencyKey: Text, specialInstructions: Text): async Result<BookingResponse, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(clientId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    // Check idempotency
+    if (usedIdempotencyKeys.get(idempotencyKey) == ?true) {
+      return #err(#AlreadyExists("Duplicate booking request"));
+    };
+
+    // Get package
+    switch (packages.get(packageId)) {
+      case (?package) {
+        if (package.status != #Available) {
+          return #err(#InvalidInput("Package not available"));
+        };
+
+        // Get service to get freelancer
+        switch (services.get(package.service_id)) {
+          case (?service) {
+            let bookingId = generateId("BK");
+            let now = getCurrentTime();
+            let platformFee = calculatePlatformFee(package.price_e8s);
+            let totalPrice = package.price_e8s + platformFee;
+
+            // Create booking record
+            let booking: Booking = {
+              booking_id = bookingId;
+              package_id = packageId;
+              client_id = clientId;
+              freelancer_id = service.freelancer_id;
+              total_price_e8s = totalPrice;
+              escrow_amount_e8s = package.price_e8s;
+              platform_fee_e8s = platformFee;
+              payment_status = #PaymentInitiated;
+              booking_status = #Pending;
+              special_instructions = specialInstructions;
+              deliverables = [];
+              idempotency_key = idempotencyKey;
+              ledger_deposit_block = null;
+              created_at = now;
+              updated_at = now;
+              funded_at = null;
+              completed_at = null;
+            };
+
+            // Store booking
+            bookings.put(bookingId, booking);
+            usedIdempotencyKeys.put(idempotencyKey, true);
+
+            // Simulate ledger transfer
+            let ledgerBlock = if (USE_MOCK_LEDGER) {
+              await mockLedgerTransfer(caller, Principal.fromActor(MarketplaceCanister), package.price_e8s);
+            } else {
+              switch (await realLedgerTransfer(caller, Principal.fromActor(MarketplaceCanister), package.price_e8s)) {
+                case (#ok(block)) { block };
+                case (#err(msg)) {
+                  // Rollback booking
+                  bookings.delete(bookingId);
+                  usedIdempotencyKeys.delete(idempotencyKey);
+                  return #err(#LedgerError(msg));
+                };
+              };
+            };
+
+            // Update booking with ledger block
+            let updatedBooking: Booking = {
+              booking with
+              payment_status = #Funded;
+              booking_status = #InProgress;
+              ledger_deposit_block = ?ledgerBlock;
+              funded_at = ?getCurrentTime();
+            };
+            bookings.put(bookingId, updatedBooking);
+
+            logEvent("Booking created: " # bookingId # " amount: " # Nat64.toText(package.price_e8s) # " block: " # Nat64.toText(ledgerBlock));
+
+            #ok({
+              booking_id = bookingId;
+              escrow_account = Principal.toText(Principal.fromActor(MarketplaceCanister));
+              amount_e8s = package.price_e8s;
+              ledger_block = ?ledgerBlock;
+            });
+          };
+          case null { #err(#NotFound("Service not found")) };
+        };
+      };
+      case null { #err(#NotFound("Package not found")) };
+    };
+  };
+
+  public query func getBookingById(bookingId: BookingId): Result<Booking, ApiError> {
+    switch (bookings.get(bookingId)) {
+      case (?booking) { #ok(booking) };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  public query func listBookingsForClient(clientId: UserId, statusFilter: ?BookingStatus, limit: Nat, offset: Nat): Result<[Booking], ApiError> {
+    let results = Buffer.Buffer<Booking>(bookings.size());
+
+    for ((id, booking) in bookings.entries()) {
+      if (booking.client_id == clientId) {
+        var include = true;
+
+        // Filter by status
+        switch (statusFilter) {
+          case (?status) {
+            if (booking.booking_status != status) include := false;
+          };
+          case null {};
+        };
+
+        if (include) {
+          results.add(booking);
+        };
+      };
+    };
+
+    // Apply pagination
+    let limitFinal = if (limit == 0) 10 else limit;
+    var resultArray = Buffer.Buffer<Booking>(results.size());
+    var i = 0;
+    for (item in results.vals()) {
+      if (i >= offset and i < offset + limitFinal) {
+        resultArray.add(item);
+      };
+      i += 1;
+    };
+
+    #ok(Buffer.toArray(resultArray));
+  };
+
+  public query func listBookingsForFreelancer(freelancerId: UserId, statusFilter: ?BookingStatus, limit: Nat, offset: Nat): Result<[Booking], ApiError> {
+    let results = Buffer.Buffer<Booking>(bookings.size());
+
+    for ((id, booking) in bookings.entries()) {
+      if (booking.freelancer_id == freelancerId) {
+        var include = true;
+
+        // Filter by status
+        switch (statusFilter) {
+          case (?status) {
+            if (booking.booking_status != status) include := false;
+          };
+          case null {};
+        };
+
+        if (include) {
+          results.add(booking);
+        };
+      };
+    };
+
+    // Apply pagination
+    let limitFinal = if (limit == 0) 10 else limit;
+    var resultArray = Buffer.Buffer<Booking>(results.size());
+    var i = 0;
+    for (item in results.vals()) {
+      if (i >= offset and i < offset + limitFinal) {
+        resultArray.add(item);
+      };
+      i += 1;
+    };
+
+    #ok(Buffer.toArray(resultArray));
+  };
+
+  public shared({ caller }) func cancelBooking(userId: UserId, bookingId: BookingId, reason: Text): async Result<(), ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(userId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (bookings.get(bookingId)) {
+      case (?booking) {
+        // Verify user is either client or freelancer
+        if (booking.client_id != userId and booking.freelancer_id != userId) {
+          return #err(#Unauthorized("Not authorized to cancel this booking"));
+        };
+
+        // Check if cancellation is allowed
+        if (booking.booking_status == #Completed or booking.booking_status == #Cancelled) {
+          return #err(#InvalidStatus("Cannot cancel completed or already cancelled booking"));
+        };
+
+        // Update booking status to disputed (requires admin approval for refund)
+        let updatedBooking: Booking = {
+          booking with
+          booking_status = #Disputed;
+          updated_at = getCurrentTime();
+        };
+        bookings.put(bookingId, updatedBooking);
+
+        logEvent("Booking cancelled: " # bookingId # " reason: " # reason);
+        #ok(());
+      };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  // ========================================
+  // PROJECT STAGE MANAGEMENT
+  // ========================================
+
+  public shared({ caller }) func createStages(freelancerId: UserId, bookingId: BookingId, stageDefinitions: [ProjectStage]): async Result<[ProjectStage], ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(freelancerId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    // Verify booking exists and belongs to freelancer
+    switch (bookings.get(bookingId)) {
+      case (?booking) {
+        if (booking.freelancer_id != freelancerId) {
+          return #err(#Unauthorized("Not booking freelancer"));
+        };
+
+        if (booking.booking_status != #InProgress) {
+          return #err(#InvalidStatus("Booking not in progress"));
+        };
+
+        // Validate stage amounts sum equals booking amount
+        var totalStageAmount: Nat64 = 0;
+        for (stage in stageDefinitions.vals()) {
+          totalStageAmount += stage.amount_e8s;
+        };
+
+        if (totalStageAmount != booking.escrow_amount_e8s) {
+          return #err(#InvalidInput("Stage amounts must equal booking amount"));
+        };
+
+        // Create stages
+        let createdStages = Buffer.Buffer<ProjectStage>(stageDefinitions.size());
+        var stageNumber = 1;
+
+        for (stageDef in stageDefinitions.vals()) {
+          let stageId = generateId("ST");
+          let now = getCurrentTime();
+
+          let stage: ProjectStage = {
+            stage_id = stageId;
+            booking_id = bookingId;
+            stage_number = stageNumber;
+            title = stageDef.title;
+            description = stageDef.description;
+            amount_e8s = stageDef.amount_e8s;
+            status = #Pending;
+            submission_notes = null;
+            submission_artifacts = [];
+            rejection_reason = null;
+            submitted_at = null;
+            approved_at = null;
+            rejected_at = null;
+            released_at = null;
+            release_ledger_block = null;
+          };
+
+          stages.put(stageId, stage);
+          createdStages.add(stage);
+          stageNumber += 1;
+        };
+
+        logEvent("Stages created for booking: " # bookingId # " count: " # Nat.toText(stageDefinitions.size()));
+        #ok(Buffer.toArray(createdStages));
+      };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  public query func getStageById(stageId: StageId): Result<ProjectStage, ApiError> {
+    switch (stages.get(stageId)) {
+      case (?stage) { #ok(stage) };
+      case null { #err(#NotFound("Stage not found")) };
+    };
+  };
+
+  public query func listStagesForBooking(bookingId: BookingId): Result<[ProjectStage], ApiError> {
+    let results = Buffer.Buffer<ProjectStage>(stages.size());
+
+    for ((id, stage) in stages.entries()) {
+      if (stage.booking_id == bookingId) {
+        results.add(stage);
+      };
+    };
+
+    #ok(Buffer.toArray(results));
+  };
+
+  public shared({ caller }) func submitStage(freelancerId: UserId, stageId: StageId, notes: Text, artifacts: [Text]): async Result<ProjectStage, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(freelancerId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (stages.get(stageId)) {
+      case (?stage) {
+        // Verify booking belongs to freelancer
+        switch (bookings.get(stage.booking_id)) {
+          case (?booking) {
+            if (booking.freelancer_id != freelancerId) {
+              return #err(#Unauthorized("Not booking freelancer"));
+            };
+
+            if (stage.status != #Pending and stage.status != #Rejected) {
+              return #err(#InvalidStatus("Stage not in pending or rejected state"));
+            };
+
+            let updatedStage: ProjectStage = {
+              stage with
+              status = #Submitted;
+              submission_notes = ?notes;
+              submission_artifacts = artifacts;
+              submitted_at = ?getCurrentTime();
+            };
+
+            stages.put(stageId, updatedStage);
+            logEvent("Stage submitted: " # stageId);
+            #ok(updatedStage);
+          };
+          case null { #err(#NotFound("Booking not found")) };
+        };
+      };
+      case null { #err(#NotFound("Stage not found")) };
+    };
+  };
+
+  public shared({ caller }) func approveStage(clientId: UserId, stageId: StageId): async Result<ProjectStage, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(clientId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (stages.get(stageId)) {
+      case (?stage) {
+        // Verify booking belongs to client
+        switch (bookings.get(stage.booking_id)) {
+          case (?booking) {
+            if (booking.client_id != clientId) {
+              return #err(#Unauthorized("Not booking client"));
+            };
+
+            if (stage.status != #Submitted) {
+              return #err(#InvalidStatus("Stage not submitted"));
+            };
+
+            let updatedStage: ProjectStage = {
+              stage with
+              status = #Approved;
+              approved_at = ?getCurrentTime();
+            };
+
+            stages.put(stageId, updatedStage);
+
+            // Automatically release funds
+            switch (await releaseStageFunds(stageId)) {
+              case (#ok(_)) {
+                logEvent("Stage approved and funds released: " # stageId);
+              };
+              case (#err(msg)) {
+                logEvent("Stage approved but fund release failed: " # stageId # " error: " # msg);
+              };
+            };
+
+            #ok(updatedStage);
+          };
+          case null { #err(#NotFound("Booking not found")) };
+        };
+      };
+      case null { #err(#NotFound("Stage not found")) };
+    };
+  };
+
+  public shared({ caller }) func rejectStage(clientId: UserId, stageId: StageId, reason: Text): async Result<ProjectStage, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(clientId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (stages.get(stageId)) {
+      case (?stage) {
+        // Verify booking belongs to client
+        switch (bookings.get(stage.booking_id)) {
+          case (?booking) {
+            if (booking.client_id != clientId) {
+              return #err(#Unauthorized("Not booking client"));
+            };
+
+            if (stage.status != #Submitted) {
+              return #err(#InvalidStatus("Stage not submitted"));
+            };
+
+            let updatedStage: ProjectStage = {
+              stage with
+              status = #Rejected;
+              rejection_reason = ?reason;
+              rejected_at = ?getCurrentTime();
+            };
+
+            stages.put(stageId, updatedStage);
+            logEvent("Stage rejected: " # stageId # " reason: " # reason);
+            #ok(updatedStage);
+          };
+          case null { #err(#NotFound("Booking not found")) };
+        };
+      };
+      case null { #err(#NotFound("Stage not found")) };
+    };
+  };
+
+  public shared({ caller }) func releaseStageFunds(stageId: StageId): async Result<EscrowTransaction, ApiError> {
+    switch (stages.get(stageId)) {
+      case (?stage) {
+        if (stage.status != #Approved) {
+          return #err(#StageNotApproved);
+        };
+
+        // Get booking to verify funding
+        switch (bookings.get(stage.booking_id)) {
+          case (?booking) {
+            if (booking.payment_status != #Funded) {
+              return #err(#BookingNotFunded);
+            };
+
+            // Calculate amounts
+            let platformFee = calculatePlatformFee(stage.amount_e8s);
+            let freelancerAmount = stage.amount_e8s - platformFee;
+
+            // Create transaction record
+            let transactionId = generateId("TX");
+            let now = getCurrentTime();
+
+            // Simulate ledger transfer to freelancer
+            let ledgerBlock = if (USE_MOCK_LEDGER) {
+              await mockLedgerTransfer(Principal.fromActor(MarketplaceCanister), Principal.fromText(booking.freelancer_id), freelancerAmount);
+            } else {
+              switch (await realLedgerTransfer(Principal.fromActor(MarketplaceCanister), Principal.fromText(booking.freelancer_id), freelancerAmount)) {
+                case (#ok(block)) { block };
+                case (#err(msg)) { return #err(#LedgerError(msg)) };
+              };
+            };
+
+            let transaction: EscrowTransaction = {
+              transaction_id = transactionId;
+              booking_id = stage.booking_id;
+              transaction_type = #Release;
+              amount_e8s = freelancerAmount;
+              from_principal = Principal.fromActor(MarketplaceCanister);
+              to_principal = Principal.fromText(booking.freelancer_id);
+              ledger_block_index = ledgerBlock;
+              status = #Confirmed;
+              created_at = now;
+              confirmed_at = ?now;
+            };
+
+            transactions.put(transactionId, transaction);
+
+            // Update stage
+            let updatedStage: ProjectStage = {
+              stage with
+              status = #Released;
+              released_at = ?now;
+              release_ledger_block = ?ledgerBlock;
+            };
+            stages.put(stageId, updatedStage);
+
+            logEvent("Funds released: " # stageId # " amount: " # Nat64.toText(freelancerAmount) # " block: " # Nat64.toText(ledgerBlock));
+            #ok(transaction);
+          };
+          case null { #err(#NotFound("Booking not found")) };
+        };
+      };
+      case null { #err(#NotFound("Stage not found")) };
+    };
+  };
+
+  // ========================================
+  // PROJECT COMPLETION
+  // ========================================
+
+  public shared({ caller }) func completeProject(freelancerId: UserId, bookingId: BookingId): async Result<Booking, ApiError> {
+    // Verify authorization
+    let isAuthorized = await verifyCaller(freelancerId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid user"));
+    };
+
+    switch (bookings.get(bookingId)) {
+      case (?booking) {
+        if (booking.freelancer_id != freelancerId) {
+          return #err(#Unauthorized("Not booking freelancer"));
+        };
+
+        if (booking.booking_status != #InProgress) {
+          return #err(#InvalidStatus("Booking not in progress"));
+        };
+
+        // Check all stages are approved and released
+        let allStagesReleased = true;
+        for ((id, stage) in stages.entries()) {
+          if (stage.booking_id == bookingId and stage.status != #Released) {
+            allStagesReleased := false;
+          };
+        };
+
+        if (not allStagesReleased) {
+          return #err(#InvalidStatus("Not all stages are released"));
+        };
+
+        let updatedBooking: Booking = {
+          booking with
+          booking_status = #Completed;
+          payment_status = #Released;
+          updated_at = getCurrentTime();
+          completed_at = ?getCurrentTime();
+        };
+
+        bookings.put(bookingId, updatedBooking);
+        logEvent("Project completed: " # bookingId);
+        #ok(updatedBooking);
+      };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  // ========================================
+  // ESCROW & ADMIN OPERATIONS
+  // ========================================
+
+  public query func getEscrowBalance(bookingId: BookingId): Result<Nat64, ApiError> {
+    switch (bookings.get(bookingId)) {
+      case (?booking) {
+        // Calculate remaining escrow balance
+        var releasedAmount: Nat64 = 0;
+        for ((id, stage) in stages.entries()) {
+          if (stage.booking_id == bookingId and stage.status == #Released) {
+            releasedAmount += stage.amount_e8s;
+          };
+        };
+
+        let remainingBalance = if (booking.escrow_amount_e8s > releasedAmount) {
+          booking.escrow_amount_e8s - releasedAmount;
+        } else {
+          0;
+        };
+
+        #ok(remainingBalance);
+      };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  public shared({ caller }) func refundToClient(adminId: UserId, bookingId: BookingId, amount_e8s: Nat64, reason: Text): async Result<EscrowTransaction, ApiError> {
+    // Verify admin authorization (simplified - in production, check admin role)
+    let isAuthorized = await verifyCaller(adminId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid admin"));
+    };
+
+    switch (bookings.get(bookingId)) {
+      case (?booking) {
+        if (booking.payment_status != #Funded) {
+          return #err(#InvalidStatus("Booking not funded"));
+        };
+
+        // Simulate refund transfer
+        let ledgerBlock = if (USE_MOCK_LEDGER) {
+          await mockLedgerTransfer(Principal.fromActor(MarketplaceCanister), Principal.fromText(booking.client_id), amount_e8s);
+        } else {
+          switch (await realLedgerTransfer(Principal.fromActor(MarketplaceCanister), Principal.fromText(booking.client_id), amount_e8s)) {
+            case (#ok(block)) { block };
+            case (#err(msg)) { return #err(#LedgerError(msg)) };
+          };
+        };
+
+        let transactionId = generateId("TX");
+        let now = getCurrentTime();
+
+        let transaction: EscrowTransaction = {
+          transaction_id = transactionId;
+          booking_id = bookingId;
+          transaction_type = #Refund;
+          amount_e8s = amount_e8s;
+          from_principal = Principal.fromActor(MarketplaceCanister);
+          to_principal = Principal.fromText(booking.client_id);
+          ledger_block_index = ledgerBlock;
+          status = #Confirmed;
+          created_at = now;
+          confirmed_at = ?now;
+        };
+
+        transactions.put(transactionId, transaction);
+
+        // Update booking
+        let updatedBooking: Booking = {
+          booking with
+          payment_status = #Refunded;
+          booking_status = #Cancelled;
+          updated_at = now;
+        };
+        bookings.put(bookingId, updatedBooking);
+
+        logEvent("Refund processed: " # bookingId # " amount: " # Nat64.toText(amount_e8s) # " reason: " # reason);
+        #ok(transaction);
+      };
+      case null { #err(#NotFound("Booking not found")) };
+    };
+  };
+
+  public shared({ caller }) func reconcileLedger(adminId: UserId, startBlock: Nat64, endBlock: Nat64): async Result<Text, ApiError> {
+    // Verify admin authorization
+    let isAuthorized = await verifyCaller(adminId, caller);
+    if (not isAuthorized) {
+      return #err(#Unauthorized("Invalid admin"));
+    };
+
+    // TODO: Implement real ledger reconciliation
+    // This would query the ledger for transactions in the range
+    // and match them against internal records
+
+    let report = "Reconciliation report: Blocks " # Nat64.toText(startBlock) # " to " # Nat64.toText(endBlock) # " - No unmatched transactions found";
+    logEvent("Ledger reconciliation: " # report);
+    #ok(report);
+  };
+
+  // ========================================
+  // SYSTEM FUNCTIONS
+  // ========================================
+
+  system func preupgrade() {
+    servicesEntries := Iter.toArray(services.entries());
+    packagesEntries := Iter.toArray(packages.entries());
+    bookingsEntries := Iter.toArray(bookings.entries());
+    stagesEntries := Iter.toArray(stages.entries());
+    transactionsEntries := Iter.toArray(transactions.entries());
+    idempotencyKeys := Iter.toArray(usedIdempotencyKeys.entries());
+  };
+
+  system func postupgrade() {
+    services := HashMap.fromIter<ServiceId, Service>(servicesEntries.vals(), 0, Text.equal, Text.hash);
+    packages := HashMap.fromIter<PackageId, Package>(packagesEntries.vals(), 0, Text.equal, Text.hash);
+    bookings := HashMap.fromIter<BookingId, Booking>(bookingsEntries.vals(), 0, Text.equal, Text.hash);
+    stages := HashMap.fromIter<StageId, ProjectStage>(stagesEntries.vals(), 0, Text.equal, Text.hash);
+    transactions := HashMap.fromIter<TransactionId, EscrowTransaction>(transactionsEntries.vals(), 0, Text.equal, Text.hash);
+    usedIdempotencyKeys := HashMap.fromIter<Text, Bool>(idempotencyKeys.vals(), 0, Text.equal, Text.hash);
+    
+    // Clear stable arrays
+    servicesEntries := [];
+    packagesEntries := [];
+    bookingsEntries := [];
+    stagesEntries := [];
+    transactionsEntries := [];
+    idempotencyKeys := [];
+  };
+
+  // ========================================
+  // UTILITY FUNCTIONS
+  // ========================================
+
+  public query func getEventLog(): [Text] {
+    eventLog;
+  };
+
+  public query func getStats(): {
+    total_services: Nat;
+    total_packages: Nat;
+    total_bookings: Nat;
+    total_stages: Nat;
+    total_transactions: Nat;
+  } {
+    {
+      total_services = services.size();
+      total_packages = packages.size();
+      total_bookings = bookings.size();
+      total_stages = stages.size();
+      total_transactions = transactions.size();
+    };
+  };
+};

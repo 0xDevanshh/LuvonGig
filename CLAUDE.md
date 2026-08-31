@@ -1,0 +1,1 @@
+- in @frontend/app/freelancer/my-services/ Failed to delete service: User email and ID are required take the email and id from the logged in user instead this happens when cliked on delete service please correct

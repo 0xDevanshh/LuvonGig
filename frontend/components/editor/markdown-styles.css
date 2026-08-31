@@ -1,0 +1,194 @@
+/* Custom styles for markdown editor and preview */
+
+.wmde-markdown {
+  background-color: transparent !important;
+}
+
+.wmde-markdown h1,
+.wmde-markdown h2,
+.wmde-markdown h3,
+.wmde-markdown h4,
+.wmde-markdown h5,
+.wmde-markdown h6 {
+  color: #1f2937;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.wmde-markdown h1 {
+  font-size: 1.875rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.wmde-markdown h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 0.5rem;
+}
+
+.wmde-markdown h3 {
+  font-size: 1.25rem;
+}
+
+.wmde-markdown p {
+  margin-bottom: 1rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.wmde-markdown ul,
+.wmde-markdown ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.wmde-markdown li {
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.wmde-markdown blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #6b7280;
+  background-color: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+}
+
+.wmde-markdown code {
+  background-color: #f3f4f6;
+  color: #1f2937;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.wmde-markdown pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.wmde-markdown pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.wmde-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.wmde-markdown th,
+.wmde-markdown td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.wmde-markdown th {
+  background-color: #f9fafb;
+  font-weight: 600;
+}
+
+.wmde-markdown a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.wmde-markdown a:hover {
+  color: #1d4ed8;
+}
+
+.wmde-markdown hr {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 2rem 0;
+}
+
+/* Editor textarea styles */
+.wmde-markdown .wmde-text-area,
+.wmde-textarea {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+  background-color: white;
+  border: none;
+  outline: none;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.wmde-markdown .wmde-text-area:focus,
+.wmde-textarea:focus {
+  outline: none;
+}
+
+/* Toolbar styles */
+.wmde-toolbar {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.5rem;
+}
+
+.wmde-toolbar button {
+  color: #6b7280;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+}
+
+.wmde-toolbar button:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.wmde-toolbar button[data-active="true"] {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Service description specific styles */
+.service-description {
+  color: #374151;
+}
+
+.service-description h1,
+.service-description h2,
+.service-description h3 {
+  color: #1f2937;
+}
+
+.service-description a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.service-description blockquote {
+  background-color: #f0f9ff;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.service-description code {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.service-description pre {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}

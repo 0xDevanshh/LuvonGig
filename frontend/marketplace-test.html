@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace Canister Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .results {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Marketplace Canister Integration Test</h1>
+        <p>This page tests the marketplace canister API to verify that service data is being saved correctly.</p>
+
+        <div class="test-section">
+            <h2>📡 Basic Connectivity Test</h2>
+            <button onclick="testConnectivity()">Test Connection</button>
+            <div id="connectivity-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Service Creation Test</h2>
+            <button onclick="testServiceCreation()">Create Test Service</button>
+            <div id="service-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📦 Package Creation Test</h2>
+            <button onclick="testPackageCreation()">Create Test Package</button>
+            <div id="package-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Service Listing Test</h2>
+            <button onclick="testServiceListing()">List Services</button>
+            <div id="listing-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔄 Full Flow Test</h2>
+            <button onclick="testFullFlow()">Run Full Flow Test</button>
+            <div id="fullflow-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 Real Canister Test</h2>
+            <button onclick="testRealCanister()">Test Real Canister</button>
+            <div id="realcanister-result" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚀 Run All Tests</h2>
+            <button onclick="runAllTests()">Run All Tests</button>
+            <div id="all-tests-result" class="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:3000';
+
+        function showResult(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            const className = isSuccess ? 'success' : data.success ? 'info' : 'error';
+
+            element.innerHTML = `
+                <div class="${className}">
+                    <h4>${isSuccess ? '✅' : '❌'} ${data.action || 'Test Result'}</h4>
+                    <p><strong>Message:</strong> ${data.message || 'No message'}</p>
+                    <p><strong>Used Real Canister:</strong> ${data.usedRealCanister ? 'Yes' : 'No (Mock)'}</p>
+                    ${data.data ? `<pre>${JSON.stringify(data.data, null, 2)}</pre>` : ''}
+                    ${data.error ? `<p><strong>Error:</strong> ${data.error}</p>` : ''}
+                </div>
+            `;
+        }
+
+        async function testConnectivity() {
+            const element = document.getElementById('connectivity-result');
+            element.innerHTML = '<div class="info">Testing connection...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test`);
+                const data = await response.json();
+                showResult('connectivity-result', data, response.ok);
+            } catch (error) {
+                showResult('connectivity-result', { error: error.message }, false);
+            }
+        }
+
+        async function testServiceCreation() {
+            const element = document.getElementById('service-result');
+            element.innerHTML = '<div class="info">Creating test service...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'createService',
+                        testData: {
+                            userId: 'test-user-123',
+                            title: 'Test Web Design Service',
+                            main_category: 'Web Designer',
+                            sub_category: 'UI/UX Design',
+                            description: 'Professional web design and development services',
+                            portfolio_images: ['https://example.com/portfolio.jpg'],
+                            faqs: [{
+                                id: '1',
+                                question: 'How long does a typical project take?',
+                                answer: 'Usually 2-4 weeks depending on complexity.'
+                            }],
+                            client_questions: [{
+                                id: '1',
+                                type: 'text',
+                                question: 'What is your business type?',
+                                required: true
+                            }]
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                showResult('service-result', data, response.ok);
+
+                // Store service ID for package test
+                if (data.success && data.data?.service_id) {
+                    window.lastServiceId = data.data.service_id;
+                    console.log('Stored service ID:', window.lastServiceId);
+                }
+            } catch (error) {
+                showResult('service-result', { error: error.message }, false);
+            }
+        }
+
+        async function testPackageCreation() {
+            const element = document.getElementById('package-result');
+            element.innerHTML = '<div class="info">Creating test package...</div>';
+
+            const serviceId = window.lastServiceId;
+            if (!serviceId) {
+                element.innerHTML = '<div class="error">❌ Please run the Service Creation test first</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'createPackage',
+                        testData: {
+                            userId: 'test-user-123',
+                            service_id: serviceId,
+                            tier: 'Basic',
+                            title: 'Basic Web Design Package',
+                            description: 'Perfect for small businesses',
+                            price_e8s: 500000000, // 5 ICP
+                            delivery_days: 7
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                showResult('package-result', data, response.ok);
+            } catch (error) {
+                showResult('package-result', { error: error.message }, false);
+            }
+        }
+
+        async function testServiceListing() {
+            const element = document.getElementById('listing-result');
+            element.innerHTML = '<div class="info">Listing services...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'listServices',
+                        testData: { limit: 5 }
+                    })
+                });
+
+                const data = await response.json();
+                showResult('listing-result', data, response.ok);
+            } catch (error) {
+                showResult('listing-result', { error: error.message }, false);
+            }
+        }
+
+        async function testFullFlow() {
+            const element = document.getElementById('fullflow-result');
+            element.innerHTML = '<div class="info">Running full flow test...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'fullFlowTest'
+                    })
+                });
+
+                const data = await response.json();
+                showResult('fullflow-result', data, response.ok);
+            } catch (error) {
+                showResult('fullflow-result', { error: error.message }, false);
+            }
+        }
+
+        async function testRealCanister() {
+            const element = document.getElementById('realcanister-result');
+            element.innerHTML = '<div class="info">Testing real canister connection...</div>';
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/marketplace/test?useRealCanister=true`);
+                const data = await response.json();
+                showResult('realcanister-result', data, response.ok);
+            } catch (error) {
+                showResult('realcanister-result', { error: error.message }, false);
+            }
+        }
+
+        async function runAllTests() {
+            const element = document.getElementById('all-tests-result');
+            element.innerHTML = '<div class="info">Running all tests...</div>';
+
+            const results = [];
+
+            try {
+                // Test 1: Connectivity
+                const connectivityResponse = await fetch(`${BASE_URL}/api/marketplace/test`);
+                const connectivityData = await connectivityResponse.json();
+                results.push({ test: 'Connectivity', success: connectivityResponse.ok, data: connectivityData });
+
+                // Test 2: Service Creation
+                const serviceResponse = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'createService',
+                        testData: { userId: 'test-user-456', title: 'All Tests Service' }
+                    })
+                });
+                const serviceData = await serviceResponse.json();
+                results.push({ test: 'Service Creation', success: serviceResponse.ok, data: serviceData });
+
+                // Test 3: Full Flow
+                const fullFlowResponse = await fetch(`${BASE_URL}/api/marketplace/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'fullFlowTest' })
+                });
+                const fullFlowData = await fullFlowResponse.json();
+                results.push({ test: 'Full Flow', success: fullFlowResponse.ok, data: fullFlowData });
+
+                // Test 4: Real Canister
+                const realCanisterResponse = await fetch(`${BASE_URL}/api/marketplace/test?useRealCanister=true`);
+                const realCanisterData = await realCanisterResponse.json();
+                results.push({ test: 'Real Canister', success: realCanisterResponse.ok, data: realCanisterData });
+
+                const successCount = results.filter(r => r.success).length;
+                const allSuccess = successCount === results.length;
+
+                element.innerHTML = `
+                    <div class="${allSuccess ? 'success' : 'error'}">
+                        <h3>🎊 All Tests Completed</h3>
+                        <p><strong>Results:</strong> ${successCount}/${results.length} tests passed</p>
+                        <ul>
+                            ${results.map(r => `<li>${r.success ? '✅' : '❌'} ${r.test}</li>`).join('')}
+                        </ul>
+                        ${allSuccess ? '<p>🎉 All marketplace canister tests passed!</p>' : '<p>⚠️ Some tests failed. Check individual results above.</p>'}
+                    </div>
+                `;
+
+            } catch (error) {
+                element.innerHTML = `<div class="error"><h3>❌ Test Suite Failed</h3><p>${error.message}</p></div>`;
+            }
+        }
+
+        // Auto-run connectivity test on page load
+        window.onload = function() {
+            console.log('🧪 Marketplace Test Page Loaded');
+            console.log('Click buttons to test marketplace canister integration');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+type Message = 
+ record {
+   from: text;
+   "text": text;
+   timestamp: int;
+ };
+service : {
+  addMessage: ("text": text, from: text) -> ();
+  clearMessages: () -> ();
+  getMessageCount: () -> (nat) query;
+  getMessages: () -> (vec Message) query;
+  greet: (name: text) -> (text) query;
+}

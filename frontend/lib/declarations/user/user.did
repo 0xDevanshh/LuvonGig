@@ -1,0 +1,99 @@
+type UserId = text;
+type User = 
+ record {
+   createdAt: int;
+   email: Email;
+   id: UserId;
+   isVerified: bool;
+   lastLoginAt: opt int;
+   otpData: opt OTPData;
+   passwordHash: PasswordHash;
+   profile: opt ProfileData;
+ };
+type Result_3 = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: UserId;
+ };
+type Result_1 = 
+ variant {
+   err: text;
+   ok;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: bool;
+ };
+type ProfileData = 
+ record {
+   bio: opt text;
+   education: vec Education;
+   experience: vec Experience;
+   firstName: text;
+   github: opt text;
+   lastName: text;
+   linkedin: opt text;
+   location: opt text;
+   phone: opt text;
+   profileImageUrl: opt text;
+   resumeUrl: opt text;
+   skills: vec text;
+   twitter: opt text;
+   website: opt text;
+ };
+type PasswordHash = text;
+type OTPData = 
+ record {
+   attempts: nat;
+   code: text;
+   expiresAt: int;
+ };
+type Experience = 
+ record {
+   company: text;
+   current: bool;
+   description: opt text;
+   endDate: opt text;
+   id: text;
+   position: text;
+   startDate: text;
+ };
+type Email = text;
+type Education = 
+ record {
+   degree: text;
+   description: opt text;
+   endDate: opt text;
+   field: text;
+   gpa: opt text;
+   id: text;
+   institution: text;
+   startDate: text;
+ };
+service : {
+  createOTP: (email: Email) -> (Result_3);
+  createUser: (email: Email, passwordHash: PasswordHash) -> (Result_2);
+  deleteOTP: (email: Email) -> ();
+  deleteUser: (userId: UserId) -> (Result_1);
+  getAllUsers: () -> (vec User);
+  getOTPCount: (email: Email) -> (nat);
+  getProfile: (userId: UserId) -> (opt ProfileData);
+  getUserByEmail: (email: Email) -> (opt User);
+  getUserById: (userId: UserId) -> (opt User);
+  isProfileSubmitted: (userId: UserId) -> (bool);
+  markProfileAsSubmitted: (userId: UserId) -> (Result_1);
+  updateLastLogin: (userId: UserId) -> (Result_1);
+  updatePassword: (userId: UserId, newPasswordHash: PasswordHash) ->
+   (Result_1);
+  updateProfile: (userId: UserId, profile: ProfileData) -> (Result_1);
+  updateProfileSubmissionStatus: (userId: UserId, isSubmitted: bool) ->
+   (Result_1);
+  verifyEmail: (userId: UserId) -> (Result_1);
+  verifyOTP: (email: Email, code: text) -> (Result);
+}

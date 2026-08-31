@@ -1,0 +1,165 @@
+type ChatMessage = 
+ record {
+   delivered: bool;
+   deleted: bool;
+   deletedAt: opt text;
+   edited: bool;
+   editedAt: opt text;
+   fileSize: opt nat;
+   fileName: opt text;
+   fileUrl: opt text;
+   from: text;
+   id: text;
+   metadata: vec record {
+                       text;
+                       text;
+                     };
+   messageType: text;
+   read: bool;
+   replyTo: opt text;
+   text: text;
+   timestamp: text;
+   to: text;
+ };
+type ChatRelationship = 
+ record {
+   bookingId: text;
+   clientEmail: text;
+   createdAt: text;
+   freelancerEmail: text;
+   isArchived: bool;
+   isMuted: bool;
+   lastMessageAt: opt text;
+   lastMessagePreview: opt text;
+   packageId: text;
+   serviceId: text;
+   serviceTitle: text;
+   status: text;
+   unreadCount: nat;
+ };
+type ChatRoom = 
+ record {
+   createdAt: text;
+   createdBy: text;
+   description: text;
+   isPrivate: bool;
+   lastActivity: text;
+   metadata: vec record {
+                       text;
+                       text;
+                     };
+   name: text;
+   participants: vec text;
+   roomId: text;
+ };
+type ChatError = 
+ variant {
+   InvalidInput: text;
+   NoRelationship: text;
+   Unauthorized: text;
+   UserNotFound: text;
+ };
+type ChatResult = 
+ variant {
+   err: ChatError;
+   ok: text;
+ };
+type ChatResult_1 = 
+ variant {
+   err: ChatError;
+   ok: vec ChatMessage;
+ };
+type ChatResult_2 = 
+ variant {
+   err: ChatError;
+   ok: vec ChatRelationship;
+ };
+type ChatResult_3 = 
+ variant {
+   err: ChatError;
+   ok: vec record {
+             text;
+             ChatMessage;
+           };
+ };
+type ChatResult_4 = 
+ variant {
+   err: ChatError;
+   ok: ChatRoom;
+ };
+type ChatResult_5 = 
+ variant {
+   err: ChatError;
+   ok: vec ChatRoom;
+ };
+type ChatResult_6 = 
+ variant {
+   err: ChatError;
+   ok: nat;
+ };
+type ChatResult_7 = 
+ variant {
+   err: ChatError;
+   ok: bool;
+ };
+type ReadReceipt = 
+ record {
+   deliveredAt: text;
+   messageId: text;
+   readAt: text;
+   readBy: text;
+ };
+type TypingIndicator = 
+ record {
+   chatRoom: text;
+   from: text;
+   isTyping: bool;
+   timestamp: text;
+   to: text;
+ };
+type UserPresence = 
+ record {
+   customStatus: opt text;
+   deviceInfo: opt text;
+   email: text;
+   isOnline: bool;
+   lastSeen: text;
+   socketId: opt text;
+   status: text;
+ };
+service : {
+  authenticateUser: (email: text, displayName: text) -> (bool);
+  createChatRelationship: (clientEmail: text, freelancerEmail: text,
+   bookingId: text, serviceTitle: text, serviceId: text, packageId: text,
+   status: text) -> (ChatResult);
+  createChatRoom: (name: text, description: text, participants: vec text,
+   createdBy: text, isPrivate: bool) -> (ChatResult_4);
+  deleteMessage: (messageId: text, userEmail: text) -> (ChatResult);
+  editMessage: (messageId: text, newText: text, userEmail: text) ->
+   (ChatResult);
+  getChatHistory: (userEmail: text, contactEmail: text, limit: nat,
+   offset: nat) -> (ChatResult_1) query;
+  getChatRelationships: (userEmail: text) -> (ChatResult_2) query;
+  getChatRoom: (roomId: text) -> (ChatResult_4) query;
+  getChatRooms: (userEmail: text) -> (ChatResult_5) query;
+  getMessageById: (messageId: text) -> (opt ChatMessage) query;
+  getRecentChats: (userEmail: text, limit: nat) -> (ChatResult_3) query;
+  getTotalMessages: () -> (nat) query;
+  getUnreadCount: (userEmail: text, contactEmail: text) -> (ChatResult_6) query;
+  healthCheck: () -> (text) query;
+  joinChatRoom: (roomId: text, userEmail: text) -> (ChatResult);
+  leaveChatRoom: (roomId: text, userEmail: text) -> (ChatResult);
+  markMessagesAsRead: (userEmail: text, contactEmail: text) -> (ChatResult);
+  saveMessage: (from: text, to: text, text: text, messageType: text,
+   timestamp: text) -> (ChatResult);
+  saveMessageWithFile: (from: text, to: text, text: text, messageType: text,
+   timestamp: text, fileUrl: text, fileName: text, fileSize: nat) ->
+   (ChatResult);
+  setTypingIndicator: (from: text, to: text, isTyping: bool, chatRoom: text) ->
+   (ChatResult);
+  updatePresence: (email: text, isOnline: bool, socketId: opt text,
+   deviceInfo: opt text, status: text, customStatus: opt text) -> (ChatResult);
+  updateReadReceipt: (messageId: text, readBy: text, readAt: text,
+   deliveredAt: text) -> (ChatResult);
+  verifySession: (email: text) -> (bool) query;
+}

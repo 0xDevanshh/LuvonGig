@@ -1,0 +1,233 @@
+type TeamMember = 
+ record {
+   accepted: bool;
+   acceptedAt: opt int;
+   invitedAt: int;
+   "principal": principal;
+ };
+type TeamId = text;
+type Team = 
+ record {
+   categoryId: opt CategoryId;
+   createdAt: int;
+   hackathonId: HackathonId;
+   id: TeamId;
+   leader: principal;
+   members: vec TeamMember;
+   name: text;
+   submissionId: opt SubmissionId;
+ };
+type SubmitProjectRequest = 
+ record {
+   demoUrl: text;
+   description: text;
+   gallery: vec text;
+   repoUrl: text;
+   summary: text;
+   teamId: TeamId;
+   title: text;
+ };
+type SubmissionStatus = 
+ variant {
+   Draft;
+   Rejected;
+   Selected;
+   Submitted;
+   UnderReview;
+ };
+type SubmissionId = text;
+type Submission = 
+ record {
+   categoryId: CategoryId;
+   demoUrl: text;
+   description: text;
+   gallery: vec text;
+   hackathonId: HackathonId;
+   id: SubmissionId;
+   repoUrl: text;
+   status: SubmissionStatus;
+   submittedAt: int;
+   summary: text;
+   teamId: TeamId;
+   title: text;
+ };
+type RewardTier = 
+ record {
+   amount: nat64;
+   awardedAt: opt int;
+   awardedBy: opt principal;
+   awardedSubmissionId: opt SubmissionId;
+   awardedTeamId: opt TeamId;
+   categoryId: opt CategoryId;
+   description: text;
+   hackathonId: HackathonId;
+   id: RewardId;
+   note: opt text;
+   perks: vec text;
+   rank: nat;
+   title: text;
+ };
+type RewardInput = 
+ record {
+   amount: nat64;
+   categoryName: opt text;
+   description: text;
+   perks: vec text;
+   rank: nat;
+   title: text;
+ };
+type RewardId = text;
+type Result_4 = 
+ variant {
+   err: HackQuestError;
+   ok: RewardTier;
+ };
+type Result_3 = 
+ variant {
+   err: HackQuestError;
+   ok: Participant;
+ };
+type Result_2 = 
+ variant {
+   err: HackQuestError;
+   ok: Team;
+ };
+type Result_1 = 
+ variant {
+   err: HackQuestError;
+   ok: Hackathon;
+ };
+type Result = 
+ variant {
+   err: HackQuestError;
+   ok: Submission;
+ };
+type Participant = 
+ record {
+   displayName: text;
+   email: text;
+   joinedAt: int;
+   "principal": principal;
+ };
+type HackathonStatus = 
+ variant {
+   Cancelled;
+   Completed;
+   Draft;
+   Judging;
+   Ongoing;
+   Upcoming;
+ };
+type HackathonId = text;
+type Hackathon = 
+ record {
+   bannerUrl: text;
+   categories: vec CategoryId;
+   createdAt: int;
+   endAt: int;
+   faq: vec text;
+   heroVideoUrl: text;
+   id: HackathonId;
+   location: text;
+   maxTeamSize: nat;
+   maxTeamsPerCategory: nat;
+   minTeamSize: nat;
+   organizer: principal;
+   prizePool: nat64;
+   resources: vec text;
+   rewards: vec RewardId;
+   startAt: int;
+   status: HackathonStatus;
+   submissionsCloseAt: int;
+   submissionsOpenAt: int;
+   summary: text;
+   tagline: text;
+   theme: text;
+   title: text;
+ };
+type HackQuestError = 
+ variant {
+   InvalidState: text;
+   NotAuthorized;
+   NotFound: text;
+   ValidationError: text;
+ };
+type CreateTeamRequest = 
+ record {
+   categoryId: opt CategoryId;
+   hackathonId: HackathonId;
+   invitees: vec principal;
+   leader: principal;
+   name: text;
+ };
+type CreateHackathonRequest = 
+ record {
+   bannerUrl: text;
+   categories: vec CategoryInput;
+   endAt: int;
+   faq: vec text;
+   heroVideoUrl: text;
+   location: text;
+   maxTeamSize: nat;
+   maxTeamsPerCategory: nat;
+   minTeamSize: nat;
+   prizePool: nat64;
+   resources: vec text;
+   rewards: vec RewardInput;
+   startAt: int;
+   submissionsCloseAt: int;
+   submissionsOpenAt: int;
+   summary: text;
+   tagline: text;
+   theme: text;
+   title: text;
+ };
+type CategoryInput = 
+ record {
+   description: text;
+   judgingCriteria: vec text;
+   name: text;
+   rewardSlots: nat;
+ };
+type CategoryId = text;
+type Category = 
+ record {
+   description: text;
+   hackathonId: HackathonId;
+   id: CategoryId;
+   judgingCriteria: vec text;
+   name: text;
+   rewardSlots: nat;
+ };
+service : {
+  addGalleryImage: (SubmissionId, text) -> (Result);
+  assignWinner: (HackathonId, RewardId, SubmissionId, opt text) -> (Result_4);
+  createHackathon: (CreateHackathonRequest) -> (Result_1);
+  createTeam: (CreateTeamRequest) -> (Result_2);
+  getHackathonDetails: (HackathonId) ->
+   (opt
+     record {
+       categories: vec Category;
+       hackathon: Hackathon;
+       rewards: vec RewardTier;
+     }) query;
+  getParticipant: (principal) -> (opt Participant) query;
+  listHackathons: (nat, nat, opt HackathonStatus) -> (vec Hackathon) query;
+  listParticipantsForHackathon: (HackathonId) -> (vec Participant) query;
+  listSubmissions: (HackathonId, opt CategoryId) -> (vec Submission) query;
+  listTeams: (HackathonId, opt CategoryId) -> (vec Team) query;
+  listWinners: (HackathonId) -> (vec RewardTier) query;
+  registerParticipant: (principal, text, text) -> (Result_3);
+  respondToInvite: (TeamId, bool) -> (Result_2);
+  submitProject: (SubmitProjectRequest) -> (Result);
+  updateHackathonStatus: (HackathonId, HackathonStatus) -> (Result_1);
+  updateSubmission: (SubmissionId,
+   record {
+     demoUrl: opt text;
+     description: opt text;
+     repoUrl: opt text;
+     status: opt SubmissionStatus;
+     summary: opt text;
+     title: opt text;
+   }) -> (Result);
+}

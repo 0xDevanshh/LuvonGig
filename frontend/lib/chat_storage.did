@@ -1,0 +1,46 @@
+type ChatResult_2 = 
+ variant {
+   err: ChatError;
+   ok: vec ChatMessage;
+ };
+type ChatResult_1 = 
+ variant {
+   err: ChatError;
+   ok: vec record {
+             text;
+             ChatMessage;
+           };
+ };
+type ChatResult = 
+ variant {
+   err: ChatError;
+   ok: text;
+ };
+type ChatMessage = 
+ record {
+   delivered: bool;
+   from: text;
+   id: text;
+   messageType: text;
+   read: bool;
+   "text": text;
+   timestamp: text;
+   to: text;
+ };
+type ChatError = 
+ variant {
+   InvalidInput: text;
+   Unauthorized: text;
+   UserNotFound: text;
+ };
+service : {
+  authenticateUser: (email: text, displayName: text) -> (bool);
+  getChatHistory: (userEmail: text, contactEmail: text, limit: nat, offset:
+   nat) -> (ChatResult_2) query;
+  getRecentChats: (userEmail: text, limit: nat) -> (ChatResult_1) query;
+  getTotalMessages: () -> (nat) query;
+  healthCheck: () -> (text) query;
+  saveMessage: (from: text, to: text, "text": text, messageType: text,
+   timestamp: text) -> (ChatResult);
+  verifySession: (email: text) -> (bool);
+}

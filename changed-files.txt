@@ -1,0 +1,99 @@
+M  backend/canister_ids.json
+A  backend/canisters/job_marketplace.mo
+M  backend/dfx.json
+M  frontend/WEBSOCKET_PRODUCTION_CHANGES.md
+M  frontend/app/add-service/others/page.tsx
+M  frontend/app/add-service/overview/page.tsx
+M  frontend/app/add-service/portfolio/page.tsx
+M  frontend/app/add-service/pricing/page.tsx
+M  frontend/app/add-service/projects/page.tsx
+ M frontend/app/api/chat/initiate/route.ts
+M  frontend/app/api/chat/messages/route.ts
+ M frontend/app/api/chat/messages/save/route.ts
+M  frontend/app/api/escrow/create/route.ts
+A  frontend/app/api/marketplace/job-posts/[jobId]/bid/route.ts
+A  frontend/app/api/marketplace/job-posts/[jobId]/complete/route.ts
+A  frontend/app/api/marketplace/job-posts/[jobId]/review/route.ts
+M  frontend/app/api/marketplace/job-posts/[jobId]/route.ts
+M  frontend/app/api/marketplace/job-posts/route.ts
+A  frontend/app/api/subscription/history/route.ts
+AM frontend/app/api/subscription/route.ts
+M  frontend/app/client/analytics/page.tsx
+M  frontend/app/client/caffeine-ai/page.tsx
+M  frontend/app/client/checkout-success/page.tsx
+M  frontend/app/client/checkout/[id]/page.tsx
+A  frontend/app/client/checkout/proposal/[proposalId]/page.tsx
+M  frontend/app/client/crypto-card/page.tsx
+A  frontend/app/client/edit-job/[jobId]/page.tsx
+M  frontend/app/client/hiring-options/page.tsx
+A  frontend/app/client/job-applications/[jobId]/page.tsx
+A  frontend/app/client/jobs/[id]/proposals/page.tsx
+M  frontend/app/client/my-job-posts/page.tsx
+M  frontend/app/client/payment-failed/page.tsx
+M  frontend/app/client/payment-success/page.tsx
+M  frontend/app/client/payment/[id]/page.tsx
+M  frontend/app/client/post-job/page.tsx
+M  frontend/app/client/projects/[bookingId]/page.tsx
+M  frontend/app/client/projects/page.tsx
+ M frontend/app/client/service/[id]/page.tsx
+M  frontend/app/client/transaction-processing/page.tsx
+M  frontend/app/clientorfreelancer/page.tsx
+M  frontend/app/freelancer/add-service/service-preview/page.tsx
+MM frontend/app/freelancer/browse-jobs/page.tsx
+M  frontend/app/freelancer/dashboard/page.tsx
+ M frontend/app/freelancer/hackathons/[id]/page.tsx
+M  frontend/app/freelancer/icp-work-swap/page.tsx
+AM frontend/app/freelancer/jobs/[id]/bid/page.tsx
+M  frontend/app/freelancer/my-projects/page.tsx
+ M frontend/app/freelancer/project-detail/[id]/page.tsx
+M  frontend/app/freelancer/project-details/[bookingId]/page.tsx
+ M frontend/app/freelancer/project-edit/[id]/page.tsx
+M  frontend/app/freelancer/submit-requirements/page.tsx
+ M frontend/app/freelancer/submitted-projects/page.tsx
+AM frontend/app/freelancer/subscription/page.tsx
+M  frontend/app/freelancer/swap/page.tsx
+M  frontend/app/freelancer/update-service/[id]/[tab]/page.tsx
+M  frontend/app/freelancer/update-service/[id]/service-preview/page.tsx
+MM frontend/app/layout.tsx
+M  frontend/app/page.tsx
+M  frontend/app/profile/ProfileDashboard.tsx
+M  frontend/app/profile/ProfilePreview.tsx
+M  frontend/components/Footer.jsx
+M  frontend/components/Header1.tsx
+M  frontend/components/Hero.jsx
+M  frontend/components/Navbar.jsx
+M  frontend/components/PageTitleManager.tsx
+M  frontend/components/Sect10.jsx
+M  frontend/components/Sect2.jsx
+M  frontend/components/Sect8.jsx
+M  frontend/components/Section3.jsx
+M  frontend/components/Section9.jsx
+MM frontend/components/Sidebar.tsx
+M  frontend/components/Vision.jsx
+M  frontend/components/admin/AdminSidebar.tsx
+M  frontend/components/auth/ForgotPasswordForm.tsx
+M  frontend/components/auth/Header.tsx
+M  frontend/components/auth/LoginForm.tsx
+M  frontend/components/auth/VerificationSuccess.tsx
+M  frontend/components/client/ClientSidebar.tsx
+M  frontend/components/escrow/EscrowManager.tsx
+ M frontend/components/messages/ChatConversation.tsx
+ M frontend/components/payment/ICPayWidget.tsx
+M  frontend/hooks/useMarketplace.ts
+ M frontend/lib/booking-enrichment.ts
+ M frontend/lib/booking-transformer.ts
+M  frontend/lib/db/chat-db.ts
+AM frontend/lib/db/usage-service.ts
+ M frontend/lib/icpay-client.ts
+ M frontend/lib/icpay-server.ts
+A  frontend/lib/job-marketplace-agent.ts
+ M frontend/lib/user-profile.ts
+ M frontend/package-lock.json
+ M frontend/package.json
+M  frontend/tmp/service-data/services.json
+ M frontend/tsconfig.json
+?? changed-files.txt
+?? changes.patch
+?? frontend/components/ui/dialog.tsx
+?? frontend/contexts/ToastContext.tsx
+?? frontend/verify_db.ts
