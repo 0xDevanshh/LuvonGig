@@ -17,6 +17,25 @@ const schema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
 
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
+
+  // Where password-reset links point. The frontend, not this API.
+  APP_URL: z.string().default('http://localhost:3000'),
+
+  // SMTP. Optional in development — email falls back to logging; required in
+  // production, where a silently-unsent password reset is worse than an error.
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+
+  OTP_TTL_MINUTES: z.coerce.number().int().positive().default(10),
+  OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
 const parsed = schema.safeParse(process.env);

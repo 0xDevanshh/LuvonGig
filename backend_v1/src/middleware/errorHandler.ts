@@ -38,6 +38,24 @@ function fromPostgres(err: { code?: string; constraint?: string; detail?: string
   }
 }
 
+interface BodyParserError {
+  status: number;
+  type: string;
+}
+
+/** body-parser tags its failures with a 4xx `status` and a `type`. */
+function isBodyParserError(err: unknown): err is BodyParserError {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { status?: unknown; type?: unknown };
+  return (
+    typeof e.status === 'number' &&
+    e.status >= 400 &&
+    e.status < 500 &&
+    typeof e.type === 'string' &&
+    e.type.startsWith('entity.')
+  );
+}
+
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   let appError: AppError;
 
@@ -47,6 +65,17 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     appError = new AppError(400, 'Invalid request.', 'VALIDATION_FAILED', {
       issues: err.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
     });
+  } else if (isBodyParserError(err)) {
+    // Malformed JSON, a body over the limit, an unsupported charset. These are
+    // bad requests, not server faults — body-parser stamps the right status on
+    // the error, and without this they would all surface as 500s.
+    appError = new AppError(
+      err.status,
+      err.type === 'entity.too.large'
+        ? 'Request body is too large.'
+        : 'Request body could not be parsed as JSON.',
+      'MALFORMED_BODY',
+    );
   } else {
     appError =
       fromPostgres(err as { code?: string }) ??

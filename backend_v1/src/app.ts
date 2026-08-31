@@ -7,6 +7,8 @@ import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './modules/health/routes.js';
+import { authRouter } from './modules/auth/routes.js';
+import { usersRouter } from './modules/users/routes.js';
 
 export function createApp() {
   const app = express();
@@ -41,8 +43,10 @@ export function createApp() {
 
   app.use(healthRouter);
 
-  // Domain routers mount here as each phase lands:
-  //   app.use('/api/auth', authRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/users', usersRouter);
+
+  // Later phases mount here:
   //   app.use('/api/services', servicesRouter);
   //   app.use('/api/bookings', bookingsRouter);
 
