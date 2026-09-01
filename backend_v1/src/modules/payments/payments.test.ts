@@ -19,6 +19,7 @@ import { query } from '../../db/pool.js';
 import { generateId } from '../../lib/ids.js';
 import * as repo from './repo.js';
 import { setProviderForTesting, type StripeProvider } from './stripe.js';
+import { ProviderError } from './provider.js';
 import type {
   AccountStatus, CreateIntentInput, IntentResult, OnboardingLink, RefundInput,
   RefundResult, TransferInput, TransferResult, VerifiedEvent,
@@ -58,19 +59,30 @@ class StubProvider {
   }
   async createIntent(input: CreateIntentInput): Promise<IntentResult> {
     this.intents.push(input);
-    return { providerPaymentId: `pi_${input.transferGroup}`, clientSecret: 'cs_test_secret', status: 'requires_payment_method' };
+    return {
+      providerPaymentId: `pi_${input.transferGroup}`,
+      clientSecret: 'cs_test_secret',
+      status: 'requires_payment_method',
+    };
   }
   async transferToAccount(input: TransferInput): Promise<TransferResult> {
     if (this.failNextTransfer) {
       this.failNextTransfer = false;
-      throw new Error('insufficient funds in platform balance');
+      // Fail as the real adapter does, so the route's ProviderError path runs.
+      throw new ProviderError('insufficient funds in platform balance', 'balance_insufficient', true);
     }
     this.transfers.push(input);
-    return { providerTransferId: `tr_${this.transfers.length}` };
+    // Globally unique: the stub is recreated per test, so a counter scoped to
+    // it would repeat `tr_1` and collide on idx_payouts_provider_ref — which
+    // is the schema correctly refusing a duplicate payout record.
+    return { providerTransferId: `tr_${generateId('x')}` };
   }
   async refund(input: RefundInput): Promise<RefundResult> {
     this.refunds.push(input);
-    return { providerRefundId: `re_${this.refunds.length}`, refundedMinor: input.amountMinor ?? 10_500n };
+    return {
+      providerRefundId: `re_${generateId('x')}`,
+      refundedMinor: input.amountMinor ?? 10_500n,
+    };
   }
   verifyWebhook(_raw: Buffer, signature: string): VerifiedEvent {
     const event = this.events.get(signature);
@@ -121,7 +133,11 @@ async function payAndHold(clientCookie: string, bookingId: string) {
   expect(intent.status).toBe(201);
 
   const paymentId = intent.body.data.payment.id;
-  await repo.transitionState(null, paymentId, 'held', ['requires_payment', 'processing']);
+  // Assert the setup worked. Without this a failed transition surfaces later
+  // as a confusing 409 from whatever the test actually meant to exercise.
+  const held = await repo.transitionState(null, paymentId, 'held', ['requires_payment', 'processing']);
+  expect(held, `payAndHold could not move ${paymentId} to held`).not.toBeNull();
+  expect(held!.state).toBe('held');
   return paymentId as string;
 }
 
@@ -133,6 +149,18 @@ beforeEach(() => {
 afterAll(async () => {
   setProviderForTesting(null);
   if (created.length > 0) {
+    // Order matters: payments.booking_id and payouts.payment_id are both
+    // ON DELETE RESTRICT, deliberately — a financial record must not be
+    // orphaned by removing what it refers to.
+    await query(
+      `DELETE FROM payouts WHERE payee_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))`,
+      [created]);
+    await query(
+      `DELETE FROM payments WHERE payer_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))
+          OR payee_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))`, [created]);
+    await query(
+      `DELETE FROM expert_bookings WHERE client_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))`,
+      [created]);
     await query(
       `DELETE FROM bookings WHERE client_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))
           OR freelancer_id IN (SELECT id FROM users WHERE email = ANY($1::citext[]))`, [created]);

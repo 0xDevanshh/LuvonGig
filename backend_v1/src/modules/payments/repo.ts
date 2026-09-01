@@ -155,20 +155,27 @@ export async function transitionState(
     : to === 'refunded' || to === 'partially_refunded' ? ', refunded_at = now()'
     : '';
 
+  // Placeholders are numbered from the params actually pushed. The previous
+  // version emitted $4/$5 only when their clauses applied but always pushed
+  // five values, so every call without them sent 5 parameters for a statement
+  // with 3 — which failed every release and refund.
+  const params: unknown[] = [id, to, from];
+  const sets: string[] = [];
+
+  if (extra.failureReason !== undefined) {
+    sets.push(`failure_reason = $${params.push(extra.failureReason)}`);
+  }
+  if (extra.refundedMinor !== undefined) {
+    sets.push(`refunded_minor = $${params.push(extra.refundedMinor.toString())}`);
+  }
+
   const sql = `
     UPDATE payments
        SET state = $2::payment_state
-           ${extra.failureReason !== undefined ? ', failure_reason = $4' : ''}
-           ${extra.refundedMinor !== undefined ? ', refunded_minor = $5' : ''}
+           ${sets.length > 0 ? `, ${sets.join(', ')}` : ''}
            ${stamp}
      WHERE id = $1 AND state = ANY($3::payment_state[])
      RETURNING *`;
-
-  const params: unknown[] = [id, to, from];
-  if (extra.failureReason !== undefined) params.push(extra.failureReason);
-  else params.push(null);
-  if (extra.refundedMinor !== undefined) params.push(extra.refundedMinor.toString());
-  else params.push(null);
 
   if (client) {
     const { rows } = await client.query<PaymentRow>(sql, params);

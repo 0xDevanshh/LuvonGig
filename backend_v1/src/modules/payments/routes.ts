@@ -19,7 +19,6 @@ import { env } from '../../config/env.js';
 import { badRequest, conflict, forbidden, notFound, serviceUnavailable } from '../../lib/errors.js';
 import { ok } from '../../lib/http.js';
 import { generateId } from '../../lib/ids.js';
-import { splitPlatformFee } from '../../lib/money.js';
 import { requireAuth } from '../../middleware/requireAuth.js';
 import { param, validateBody } from '../../middleware/validate.js';
 import * as repo from './repo.js';
@@ -166,7 +165,11 @@ paymentsRouter.post('/intent',
       }
 
       const total = BigInt(booking.total_minor);
-      const { fee } = splitPlatformFee(total);
+      // Use the fee the booking already recorded. Recomputing it from the
+      // total double-charges: the total is base + fee, so splitPlatformFee on
+      // it yields a fee on the fee — the platform over-collects and the
+      // freelancer is short-paid by that difference.
+      const fee = BigInt(booking.platform_fee_minor);
 
       const paymentId = generateId('pay');
       await repo.insertPayment({
@@ -259,7 +262,7 @@ paymentsRouter.post('/checkout',
 
       if (!payment) {
         const total = BigInt(booking.total_minor);
-        const { fee } = splitPlatformFee(total);
+        const fee = BigInt(booking.platform_fee_minor);
         const paymentId = generateId('pay');
         await repo.insertPayment({
           id: paymentId,

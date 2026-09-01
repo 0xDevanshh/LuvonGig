@@ -17,7 +17,12 @@ type Schema<Out, In> = ZodType<Out, ZodTypeDef, In>;
 export function validateBody<Out, In>(schema: Schema<Out, In>): RequestHandler {
   return (req, _res, next) => {
     try {
-      req.body = schema.parse(req.body);
+      // Express leaves `body` undefined when a request carries none, and Zod
+      // rejects undefined even for a schema whose fields are all optional. A
+      // POST with no body is legitimate — "refund everything", "mark complete"
+      // — so an absent body is parsed as {}. A schema with required fields
+      // still fails, with per-field messages rather than "expected object".
+      req.body = schema.parse(req.body ?? {});
       next();
     } catch (err) {
       next(err);

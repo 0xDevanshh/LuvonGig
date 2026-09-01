@@ -468,25 +468,17 @@ d('bookings', () => {
     });
   });
 
-  it('records payment and activates the booking', async () => {
-    const { freelancer, client, packageId } = await scenario();
+  it('no longer accepts a self-reported payment', async () => {
+    const { client, freelancer, packageId } = await scenario();
     const booking = await book(client.cookie, packageId);
 
-    // A freelancer must not be able to mark their own work paid.
-    const byFreelancer = await request(app)
-      .post(`/api/bookings/${booking.booking_id}/paid`).set('Cookie', freelancer.cookie);
-    expect(byFreelancer.status).toBe(403);
-
-    const paid = await request(app)
-      .post(`/api/bookings/${booking.booking_id}/paid`).set('Cookie', client.cookie);
-    expect(paid.status).toBe(200);
-    expect(paid.body.data.payment_status).toBe('HeldInEscrow');
-    expect(paid.body.data.status).toBe('Active');
-    expect(paid.body.data.isPaid).toBe(true);
-
-    const twice = await request(app)
-      .post(`/api/bookings/${booking.booking_id}/paid`).set('Cookie', client.cookie);
-    expect(twice.status).toBe(409);
+    // Retired in Phase 5: a client asserting "I paid" is not evidence that
+    // money moved. Payment is recorded only by a signed Stripe webhook.
+    for (const cookie of [client.cookie, freelancer.cookie]) {
+      const res = await request(app).post(`/api/bookings/${booking.booking_id}/paid`).set('Cookie', cookie);
+      expect(res.status).toBe(410);
+      expect(res.body.code).toBe('GONE');
+    }
   });
 });
 

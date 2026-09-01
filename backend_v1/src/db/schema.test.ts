@@ -234,12 +234,47 @@ d('schema invariants', () => {
 
   it('rejects a refund larger than the payment', async () => {
     await inRollback(async (sql) => {
+      const client = await makeUser(sql, 'c');
+      const freelancer = await makeUser(sql, 'f');
+      const { serviceId, packageId } = await makeServiceWithPackage(sql, freelancer);
+      const bookingId = await makeBooking(sql, { clientId: client, freelancerId: freelancer, serviceId, packageId });
+
+      // The row has to be valid in every other respect to reach the constraint
+      // under test: payment_purpose_target requires a 'booking' payment to
+      // name a booking, and would otherwise fail first.
+      await expect(
+        sql(`INSERT INTO payments (id, purpose, booking_id, payer_id, payee_id, provider,
+               amount_minor, refunded_minor)
+             VALUES ($1,'booking',$2,$3,$4,'stripe',1000,2000)`,
+          [generateId('pay'), bookingId, client, freelancer]),
+      ).rejects.toThrow(/refund_within_amount/);
+    });
+  });
+
+  it('requires a booking payment to name its booking', async () => {
+    await inRollback(async (sql) => {
       const payer = await makeUser(sql, 'p');
       const payee = await makeUser(sql, 'q');
+      // Without payment_purpose_target a subscription could carry a booking_id
+      // and be released through the booking path.
       await expect(
-        sql(`INSERT INTO payments (id, payer_id, payee_id, provider, amount_minor, refunded_minor)
-             VALUES ($1,$2,$3,'stripe',1000,2000)`, [generateId('pay'), payer, payee]),
-      ).rejects.toThrow(/refund_within_amount/);
+        sql(`INSERT INTO payments (id, purpose, payer_id, payee_id, provider, amount_minor)
+             VALUES ($1,'booking',$2,$3,'stripe',1000)`, [generateId('pay'), payer, payee]),
+      ).rejects.toThrow(/payment_purpose_target/);
+    });
+  });
+
+  it('requires a subscription payment to have no payee', async () => {
+    // Separate transaction: a failed statement aborts the one it ran in, so a
+    // second expected failure cannot share it.
+    await inRollback(async (sql) => {
+      const payer = await makeUser(sql, 'p');
+      const payee = await makeUser(sql, 'q');
+      // A subscription is paid to the platform; there is no counterparty.
+      await expect(
+        sql(`INSERT INTO payments (id, purpose, payer_id, payee_id, provider, amount_minor)
+             VALUES ($1,'subscription',$2,$3,'stripe',1000)`, [generateId('pay'), payer, payee]),
+      ).rejects.toThrow(/payment_purpose_target/);
     });
   });
 
