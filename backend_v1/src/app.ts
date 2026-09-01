@@ -18,6 +18,7 @@ import { hackathonsRouter, teamsRouter, submissionsRouter } from './modules/hack
 import { hackquestCompatRouter } from './modules/hackathons/compat.js';
 import { paymentsRouter } from './modules/payments/routes.js';
 import { purposesRouter } from './modules/payments/purposes.js';
+import { chatRouter, chatHealthRouter } from './modules/chat/routes.js';
 import { webhookRouter } from './modules/payments/webhook.js';
 
 export function createApp() {
@@ -76,6 +77,8 @@ export function createApp() {
 
   app.use('/api/payments', paymentsRouter);
   app.use('/api/payments', purposesRouter);
+  app.use('/api/chat/health', chatHealthRouter);
+  app.use('/api/chat', chatRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

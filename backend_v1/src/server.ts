@@ -2,12 +2,18 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { closePool, checkConnection } from './db/pool.js';
 import { logger } from './lib/logger.js';
+import { attachChatSocket } from './modules/chat/socket.js';
 
 const app = createApp();
 
 const server = app.listen(env.PORT, () => {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, 'API listening');
 });
+
+// Chat shares this HTTP server, so one process serves both and the socket
+// authenticates with the same session as the REST API. The standalone
+// Socket.IO server it replaces had no authentication at all.
+attachChatSocket(server);
 
 // Warn rather than exit: the process should stay up and keep serving /health so
 // an orchestrator can distinguish "database is down" from "the app crashed".

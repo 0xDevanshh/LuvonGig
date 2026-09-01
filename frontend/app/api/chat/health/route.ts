@@ -1,25 +1,7 @@
-import { NextResponse } from 'next/server';
-import { chatStorageApi } from '@/lib/chat-storage-agent';
+import { NextRequest } from 'next/server';
+import { proxy } from '@/lib/api-proxy';
 
-export async function GET() {
-  try {
-    const health = await chatStorageApi.healthCheck();
-    const totalMessages = await chatStorageApi.getTotalMessages();
-
-    return NextResponse.json({
-      status: health,
-      totalMessages,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    return NextResponse.json(
-      {
-        status: 'error',
-        error: 'Health check failed',
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
-  }
+// Proxied to the Express backend (Phase 6).
+export async function GET(request: NextRequest) {
+  return proxy(request, '/api/chat/health');
 }

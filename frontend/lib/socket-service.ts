@@ -97,9 +97,14 @@ class SocketService {
 
         console.log(`[Socket] Creating new connection for ${userEmail}`)
         this.socket = io(SOCKET_URL, {
-          auth: {
-            username: userEmail
-          },
+          // Identity comes from the httpOnly `sid` session cookie, verified
+          // server-side on the handshake. The previous version sent
+          // `auth: { username: userEmail }` and the server believed it — any
+          // client could connect as any user and read their messages.
+          //
+          // withCredentials is what makes the browser attach the cookie to a
+          // cross-origin socket handshake at all.
+          withCredentials: true,
           transports: ['websocket', 'polling'],
           timeout: 10000,
           forceNew: true
