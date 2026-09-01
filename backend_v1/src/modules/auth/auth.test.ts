@@ -11,7 +11,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../app.js';
-import { closePool, query } from '../../db/pool.js';
+import { query } from '../../db/pool.js';
 import { loginLimiter, otpRequestLimiter, otpVerifyLimiter, passwordResetLimiter } from '../../lib/rateLimit.js';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -71,7 +71,6 @@ d('auth', () => {
 
   afterAll(async () => {
     for (const email of created) await cleanup(email);
-    await closePool();
   });
 
   it('walks signup -> verify -> login', async () => {
@@ -284,7 +283,6 @@ d('users and profile', () => {
   const created: string[] = [];
   afterAll(async () => {
     for (const email of created) await cleanup(email);
-    await closePool();
   });
 
   it('requires a session on every route', async () => {

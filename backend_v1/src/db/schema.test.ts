@@ -11,7 +11,7 @@
  * runs them in the migrations job against a throwaway Postgres.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { closePool, query, withTransaction } from './pool.js';
+import { query, withTransaction } from './pool.js';
 import { newBookingId, newServiceId, newUserId, generateId } from '../lib/ids.js';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -83,7 +83,6 @@ d('schema invariants', () => {
   });
 
   afterAll(async () => {
-    await closePool();
   });
 
   it('rejects a booking whose amounts do not balance', async () => {

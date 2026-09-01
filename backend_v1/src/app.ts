@@ -13,6 +13,9 @@ import { servicesRouter, packagesRouter } from './modules/services/routes.js';
 import { bookingsRouter, stagesRouter } from './modules/bookings/routes.js';
 import { compatRouter } from './modules/bookings/compat.js';
 import { statsRouter } from './modules/stats/routes.js';
+import { jobsRouter, acceptProposalRouter } from './modules/jobs/routes.js';
+import { hackathonsRouter, teamsRouter, submissionsRouter } from './modules/hackathons/routes.js';
+import { hackquestCompatRouter } from './modules/hackathons/compat.js';
 
 export function createApp() {
   const app = express();
@@ -58,8 +61,14 @@ export function createApp() {
   // Deleted in Phase 7 once callers move to the path-based routes.
   app.use('/api/compat', compatRouter);
 
+  app.use('/api/job-posts', jobsRouter);
+  app.use('/api/accept-proposal', acceptProposalRouter);
+  app.use('/api/hackathons', hackathonsRouter);
+  app.use('/api/teams', teamsRouter);
+  app.use('/api/submissions', submissionsRouter);
+  app.use('/api/compat/hackquest', hackquestCompatRouter);
+
   // Later phases mount here:
-  //   app.use('/api/job-posts', jobsRouter);      // Phase 4
   //   app.use('/api/payments', paymentsRouter);   // Phase 5
 
   app.use(notFoundHandler);

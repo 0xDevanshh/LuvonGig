@@ -14,10 +14,10 @@ import { NextRequest, NextResponse } from 'next/server';
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 /**
- * To roll a route back to the canister implementation, restore its
- * `route.canister.ts.bak` over `route.ts` — the originals sit next to each
- * proxy. There is no runtime flag: a half-wired switch that silently does
- * nothing is worse than an explicit file swap.
+ * To roll a route back to its canister implementation, recover the file from
+ * git history (`git show <commit>:<path> > <path>`). Copies of the originals
+ * used to sit beside each proxy as `.canister.ts.bak`; they were 10k lines of
+ * duplicated dead code that git already stored, so they were removed.
  */
 
 export async function proxy(request: NextRequest, targetPath: string): Promise<NextResponse> {

@@ -8,7 +8,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../app.js';
-import { closePool, query } from '../../db/pool.js';
+import { query } from '../../db/pool.js';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const d = hasDb ? describe : describe.skip;
@@ -70,7 +70,6 @@ afterAll(async () => {
     await query('DELETE FROM otp_codes WHERE email = ANY($1::citext[])', [created]);
     await query('DELETE FROM users WHERE email = ANY($1::citext[])', [created]);
   }
-  await closePool();
 });
 
 d('services', () => {
