@@ -17,8 +17,16 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import net from 'node:net';
 import pg from 'pg';
 import { env } from '../config/env.js';
+
+// Same reason as src/db/pool.ts: Node's family auto-selection stalls on this
+// network and surfaces as ETIMEDOUT despite the host being reachable. The
+// migration runner does not import pool.ts, so it needs its own call.
+if (typeof net.setDefaultAutoSelectFamily === 'function') {
+  net.setDefaultAutoSelectFamily(false);
+}
 
 const { Client } = pg;
 const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), 'migrations');
@@ -168,6 +176,21 @@ if (!run) {
 }
 
 run().catch((err) => {
-  console.error(`\nMigration ${command} failed:\n`, err instanceof Error ? err.message : err);
+  // Print everything: a Postgres error carries its useful detail in `detail`,
+  // `hint` and `position` rather than `message`, and a connection failure can
+  // arrive with an empty message entirely. Printing only `err.message` turned
+  // a real failure into a blank line.
+  console.error(`\nMigration ${command} failed:`);
+  if (err instanceof Error) {
+    console.error(`  ${err.name}: ${err.message || '(no message)'}`);
+    for (const key of ['code', 'detail', 'hint', 'position', 'where', 'constraint', 'severity']) {
+      const value = (err as unknown as Record<string, unknown>)[key];
+      if (value) console.error(`  ${key}: ${String(value)}`);
+    }
+    if (err.stack) console.error(err.stack.split('\n').slice(1, 4).join('\n'));
+    if ('cause' in err && err.cause) console.error('  cause:', err.cause);
+  } else {
+    console.error(err);
+  }
   process.exit(1);
 });

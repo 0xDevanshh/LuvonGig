@@ -21,6 +21,7 @@ import { validateBody, param } from '../../middleware/validate.js';
 import * as repo from './repo.js';
 import * as serviceRepo from '../services/repo.js';
 import { toBookingDto, toStageDto, toTimelineDto } from './dto.js';
+import { createBooking } from './service.js';
 
 export const bookingsRouter = Router();
 bookingsRouter.use(requireAuth);
@@ -90,7 +91,7 @@ bookingsRouter.get('/', async (req, res, next) => {
   }
 });
 
-const createBooking = z.object({
+const createBookingSchema = z.object({
   package_id: z.string().min(1),
   requirements: z.array(z.string().max(2000)).max(50).default([]),
   special_instructions: z.string().max(4000).default(''),
@@ -99,74 +100,24 @@ const createBooking = z.object({
     .transform((v) => BigInt(v)).default(0),
 });
 
-bookingsRouter.post('/', validateBody(createBooking), async (req, res, next) => {
+bookingsRouter.post('/', validateBody(createBookingSchema), async (req, res, next) => {
   try {
     const body = req.body as {
       package_id: string; requirements: string[]; special_instructions: string;
-      promo_code?: string | null; discount_minor: bigint;
+      discount_minor: bigint;
     };
 
-    const pkg = await serviceRepo.getPackage(body.package_id);
-    if (!pkg || !pkg.is_active) return next(notFound('Package not found'));
-
-    const service = await serviceRepo.getService(pkg.service_id);
-    if (!service || service.status !== 'active') {
-      return next(badRequest('That service is not currently available'));
-    }
-    if (service.freelancer_id === req.user!.userId) {
-      // booking_parties_differ would reject this anyway.
-      return next(badRequest('You cannot book your own service'));
-    }
-    if (service.price_needs_review || pkg.price_needs_review) {
-      // Migrated rows carry a placeholder price; selling at it would be wrong.
-      return next(conflict('This service is being repriced and cannot be booked yet'));
-    }
-
-    const base = BigInt(pkg.price_minor);
-    const discount = body.discount_minor;
-    if (discount > base) return next(badRequest('Discount cannot exceed the package price'));
-
-    // booking_amounts_balance: total = base + fee - discount.
-    const { fee } = splitPlatformFee(base);
-    const total = base + fee - discount;
-
-    const bookingId = newBookingId();
-
-    // Booking and its first timeline event are one unit of work.
-    await withTransaction(async (client) => {
-      await repo.insertBooking(client, {
-        id: bookingId,
-        serviceId: service.id,
-        packageId: pkg.id,
-        clientId: req.user!.userId,
-        freelancerId: service.freelancer_id,
-        title: service.title,
-        description: pkg.description,
-        requirements: body.requirements,
-        specialInstructions: body.special_instructions,
-        currency: pkg.currency,
-        totalMinor: total,
-        baseMinor: base,
-        feeMinor: fee,
-        discountMinor: discount,
-        promoCode: body.promo_code ?? null,
-        // Immutable record of what was agreed: editing the package later must
-        // not change the terms of an existing order.
-        packageSnapshot: {
-          tier: pkg.tier, title: pkg.name, description: pkg.description,
-          price_minor: pkg.price_minor, currency: pkg.currency,
-          revisions: pkg.revisions, features: pkg.features,
-          delivery_time_days: pkg.delivery_time_days,
-        },
-        deliveryDays: pkg.delivery_time_days,
-      });
-
-      await repo.addTimelineEvent(client, bookingId, 'booking_created', req.user!.userId,
-        'Booking created', { packageId: pkg.id, serviceId: service.id });
+    // Shared with POST /api/payments/checkout so both doors apply the same
+    // availability, self-booking and repricing rules.
+    const created = await createBooking({
+      clientId: req.user!.userId,
+      packageId: body.package_id,
+      requirements: body.requirements,
+      specialInstructions: body.special_instructions,
+      discountMinor: body.discount_minor,
     });
 
-    const created = await repo.getBooking(bookingId);
-    res.status(201).json({ success: true, data: toBookingDto(created!) });
+    res.status(201).json({ success: true, data: toBookingDto(created) });
   } catch (err) {
     next(err);
   }
@@ -242,29 +193,20 @@ bookingsRouter.put('/:bookingId/status', validateBody(statusUpdate), async (req,
 });
 
 /**
- * Marks a booking paid. Interim: real payment capture arrives in Phase 5, and
- * this will then be driven by a verified provider webhook rather than a client
- * call. Restricted to the client so a freelancer cannot mark their own work paid.
+ * RETIRED (Phase 5). A client used to assert "I paid" and the system believed
+ * them — a placeholder from before there was a payment provider.
+ *
+ * Payment is now recorded only by a signature-verified provider webhook
+ * (payment_intent.succeeded), which is the one source that can actually
+ * confirm money moved. Kept as an explicit 410 rather than deleted so a stale
+ * client gets a clear answer instead of a 404 it might treat as a routing bug.
  */
-bookingsRouter.post('/:bookingId/paid', async (req, res, next) => {
-  try {
-    const { booking, party } = await loadForParty(param(req, 'bookingId'), req.user!.userId);
-    if (party !== 'client') return next(forbidden('Only the client can confirm payment'));
-    if (booking.payment_status !== 'pending') {
-      return next(conflict('Payment has already been recorded for this booking'));
-    }
-
-    await withTransaction(async (client) => {
-      await repo.setPaymentStatus(client, booking.id, 'held_in_escrow');
-      if (booking.status === 'pending') await repo.setStatus(client, booking.id, 'active');
-      await repo.addTimelineEvent(client, booking.id, 'payment_completed', req.user!.userId,
-        'Payment recorded', {});
-    });
-
-    ok(res, toBookingDto((await repo.getBooking(booking.id))!));
-  } catch (err) {
-    next(err);
-  }
+bookingsRouter.post('/:bookingId/paid', async (_req, res) => {
+  res.status(410).json({
+    success: false,
+    error: 'Confirming payment directly is no longer supported. Pay through /api/payments/intent.',
+    code: 'GONE',
+  });
 });
 
 const reviewInput = z.object({

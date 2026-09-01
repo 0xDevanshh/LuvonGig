@@ -18,7 +18,7 @@ import {
     Star
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ICPayWidget } from '@/components/payment/ICPayWidget';
+import StripeCheckout from '@/components/payment/StripeCheckout';
 
 export default function ExpertDetailsPage() {
     const { id } = useParams();
@@ -261,17 +261,15 @@ export default function ExpertDetailsPage() {
                         </Card>
 
                         {isPayOpen && (
-                            <ICPayWidget
-                                amountUsd={parseFloat(expert.session_amount_icp)}
-                                defaultSymbol="ICP"
+                            <StripeCheckout
+                                endpoint="/api/payments/expert-session"
+                                payload={{
+                                    expert_id: expert.id,
+                                    scheduled_at: new Date().toISOString(),
+                                    duration_minutes: 60,
+                                }}
                                 onSuccess={handlePaymentSuccess}
                                 onError={() => setIsPayOpen(false)}
-                                metadata={{
-                                    expertId: expert.id,
-                                    expertName: expert.name,
-                                    type: 'expert_session',
-                                    clientEmail: profile?.email
-                                }}
                             />
                         )}
                     </div>

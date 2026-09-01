@@ -7,7 +7,6 @@ import { ProfilePreview } from '@/components/ProfilePreview'
 import { useRouter } from 'next/navigation'
 import { User, Globe, Wallet } from 'lucide-react'
 import { useOnboardingSession as useOnboarding } from '@/hooks/useOnboardingSession'
-import ConnectWallet from '@/components/wallet/ConnectWallet'
 
 export function ProfileSetup() {
   const navigate = useRouter()
@@ -365,14 +364,6 @@ export function ProfileSetup() {
                     <p className="text-sm text-gray-600">
                       Connect your Plug wallet to enable secure escrow payments and receive funds from completed projects.
                     </p>
-
-                    <ConnectWallet 
-                      onConnect={(data) => {
-                        setWalletConnected(true)
-                        setWalletInfo(data)
-                        console.log('✅ Wallet connected and saved:', data)
-                      }}
-                    />
                     {walletConnected && walletInfo && (
                       <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
                         <div className="text-sm text-green-800">

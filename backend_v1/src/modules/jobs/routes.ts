@@ -262,23 +262,15 @@ jobsRouter.post('/:jobId/complete', requireAuth, async (req, res, next) => {
   }
 });
 
-jobsRouter.post('/:jobId/paid', requireAuth, async (req, res, next) => {
-  try {
-    const job = await repo.getJob(param(req, 'jobId'));
-    if (!job) return next(notFound('Job not found'));
-    if (job.client_id !== req.user!.userId) {
-      return next(forbidden('Only the client can record payment'));
-    }
-    if (job.status !== 'completed') {
-      return next(conflict('Only a completed job can be marked paid'));
-    }
-
-    // Interim, as in Phase 3: a verified provider webhook drives this in Phase 5.
-    await withTransaction((client) => repo.setJobStatus(client, job.id, 'paid'));
-    ok(res, toJobDto((await repo.getJob(job.id))!));
-  } catch (err) {
-    next(err);
-  }
+// RETIRED (Phase 5): same reason as the booking equivalent — a client
+// asserting payment is not evidence of payment. Job payment will be driven by
+// the provider webhook once job payments move onto the payments module.
+jobsRouter.post('/:jobId/paid', async (_req, res) => {
+  res.status(410).json({
+    success: false,
+    error: 'Confirming payment directly is no longer supported.',
+    code: 'GONE',
+  });
 });
 
 jobsRouter.post('/:jobId/review', requireAuth,

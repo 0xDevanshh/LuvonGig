@@ -231,13 +231,9 @@ d('job posts', () => {
       expect(again.status).toBe(409);
     });
 
-    it('walks assigned -> completed -> paid, in order and by the client only', async () => {
+    it('walks assigned -> completed, by the client only', async () => {
       const { client, freelancer, job, proposalId } = await withBid();
       await request(app).post('/api/accept-proposal').set('Cookie', client.cookie).send({ proposalId });
-
-      // Paid before completed is out of order.
-      const early = await request(app).post(`/api/job-posts/${job.id}/paid`).set('Cookie', client.cookie);
-      expect(early.status).toBe(409);
 
       // A freelancer marking their own job complete would trigger payment.
       const byFreelancer = await request(app)
@@ -247,10 +243,18 @@ d('job posts', () => {
       const done = await request(app).post(`/api/job-posts/${job.id}/complete`).set('Cookie', client.cookie);
       expect(done.body.data.status).toBe('COMPLETED');
       expect(done.body.data.completedAt).not.toBeNull();
+    });
 
-      const paid = await request(app).post(`/api/job-posts/${job.id}/paid`).set('Cookie', client.cookie);
-      expect(paid.body.data.status).toBe('PAID');
-      expect(paid.body.data.isPaid).toBe(true);
+    it('no longer accepts a self-reported payment', async () => {
+      const { client, job, proposalId } = await withBid();
+      await request(app).post('/api/accept-proposal').set('Cookie', client.cookie).send({ proposalId });
+      await request(app).post(`/api/job-posts/${job.id}/complete`).set('Cookie', client.cookie);
+
+      // Retired in Phase 5: a client asserting "I paid" is not evidence that
+      // money moved. Payment is recorded only by a signed provider webhook.
+      const res = await request(app).post(`/api/job-posts/${job.id}/paid`).set('Cookie', client.cookie);
+      expect(res.status).toBe(410);
+      expect(res.body.code).toBe('GONE');
     });
 
     it('takes one review, after completion only', async () => {

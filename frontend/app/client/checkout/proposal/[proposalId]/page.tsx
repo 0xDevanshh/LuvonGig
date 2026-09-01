@@ -13,7 +13,7 @@ import {
 import { OrderSummary } from '@/components/payment/OrderSummary';
 import { PaymentProcessing } from '@/components/payment/PaymentProcessing';
 import { PaymentSuccess } from '@/components/payment/PaymentSuccess';
-import EscrowManager from '@/components/escrow/EscrowManager';
+import StripeCheckout from '@/components/payment/StripeCheckout';
 import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent';
 import { getUserProfileByEmail } from '@/lib/user-profile';
 
@@ -271,18 +271,10 @@ export default function ProposalCheckoutPage() {
                                 </p>
                             </div>
 
-                            <EscrowManager
-                                projectId={job.id}
-                                freelancerUserId={proposal.freelancerId}
-                                expectedAmountICP={calculateTotal()}
+                            <StripeCheckout
                                 proposalId={proposal.id}
-                                serviceTitle={job.title}
-                                isClient
-                                onEscrowCreated={(data) => {
-                                    setPaymentResult({ transactionId: data.escrowId });
-                                }}
-                                onPaymentSuccess={(txId) => {
-                                    setPaymentResult((prev: any) => ({ ...prev, transactionId: txId }));
+                                onSuccess={(paymentId) => {
+                                    setPaymentResult({ transactionId: paymentId });
                                     setPaymentStep('success');
                                 }}
                             />

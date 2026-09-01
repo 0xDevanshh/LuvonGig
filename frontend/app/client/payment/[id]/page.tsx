@@ -8,13 +8,12 @@ import {
   Shield,
   Info
 } from 'lucide-react';
-// import { ICPayWidget } from '@/components/payment/ICPayWidget'; // Commented out - no longer using ICPay SDK, only escrow
 import { ServiceSummary } from '@/components/payment/ServiceSummary';
 import { UpsellSection } from '@/components/payment/UpsellSection';
 import { OrderSummary } from '@/components/payment/OrderSummary';
 import { PaymentProcessing } from '@/components/payment/PaymentProcessing';
 import { PaymentSuccess } from '@/components/payment/PaymentSuccess';
-import EscrowManager from '@/components/escrow/EscrowManager';
+import StripeCheckout from '@/components/payment/StripeCheckout';
 
 interface Service {
   service_id: string;
@@ -364,16 +363,6 @@ export default function PaymentPage() {
             Pay securely with ICP tokens using the ICPay payment widget
             (default flow – leave active while we integrate escrow)
           </p>
-          <ICPayWidget
-            amountUsd={calculateTotal()}
-            onSuccess={handlePaymentSuccess}
-            onError={handlePaymentError}
-            metadata={{
-              serviceId: service?.service_id,
-              packageId: selectedPackage?.package_id,
-              clientEmail: profile?.email,
-            }}
-          />
         </div> */}
 
             {/* Escrow Payment via Plug */}
@@ -382,28 +371,20 @@ export default function PaymentPage() {
                 <div className="mb-4">
                   <h3 className="font-semibold text-lg mb-2">Escrow Payment (Plug Wallet)</h3>
                   <p className="text-sm text-gray-600">
-                    Connect your Plug wallet, fund the escrow with ICP, and release payment when the work is delivered.
-                    Your payment is securely held in escrow until project completion.
+                    Your payment is held securely and only released to the freelancer once you approve the work.
                   </p>
                 </div>
 
-                <EscrowManager
-                  projectId={service.service_id}
-                  freelancerUserId={service.freelancer_id}
-                  expectedAmountICP={calculateTotalForEscrow()}
+                <StripeCheckout
                   packageId={selectedPackage.package_id}
-                  serviceTitle={service.title}
-                  packageTitle={selectedPackage.title}
                   specialInstructions={specialInstructions}
-                  isClient
-                  onPaymentSuccess={(txId) => {
+                  onSuccess={(paymentId) => {
                     setPaymentResult({
-                      transactionId: txId,
+                      transactionId: paymentId,
                       amount: calculateTotal().toString(),
-                      symbol: 'ICP',
-                      status: 'completed',
+                      symbol: 'USD',
+                      status: 'held',
                     });
-                    setPaymentStep('success');
                   }}
                 />
               </div>

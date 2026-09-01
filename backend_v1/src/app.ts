@@ -16,6 +16,9 @@ import { statsRouter } from './modules/stats/routes.js';
 import { jobsRouter, acceptProposalRouter } from './modules/jobs/routes.js';
 import { hackathonsRouter, teamsRouter, submissionsRouter } from './modules/hackathons/routes.js';
 import { hackquestCompatRouter } from './modules/hackathons/compat.js';
+import { paymentsRouter } from './modules/payments/routes.js';
+import { purposesRouter } from './modules/payments/purposes.js';
+import { webhookRouter } from './modules/payments/webhook.js';
 
 export function createApp() {
   const app = express();
@@ -42,8 +45,11 @@ export function createApp() {
   // everything else.
   app.use(pinoHttp({ logger, autoLogging: { ignore: (req) => req.url?.startsWith('/health') ?? false } }));
 
-  // Stripe webhooks verify a signature over the exact bytes sent, so that route
-  // needs express.raw() and must be mounted before this JSON parser.
+  // Mounted BEFORE express.json(): Stripe verifies its signature over the exact
+  // bytes it sent, and a parsed body is no longer those bytes. Moving this line
+  // below the parser silently breaks every webhook.
+  app.use('/api/payments/webhook', webhookRouter);
+
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
@@ -68,8 +74,8 @@ export function createApp() {
   app.use('/api/submissions', submissionsRouter);
   app.use('/api/compat/hackquest', hackquestCompatRouter);
 
-  // Later phases mount here:
-  //   app.use('/api/payments', paymentsRouter);   // Phase 5
+  app.use('/api/payments', paymentsRouter);
+  app.use('/api/payments', purposesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

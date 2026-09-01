@@ -33,6 +33,12 @@ const schema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
 
+  // Stripe. Optional so the API boots without payment keys — the payment
+  // routes return 503 rather than the whole service failing to start.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  PLATFORM_CURRENCY: z.string().length(3).default('USD'),
+
   OTP_TTL_MINUTES: z.coerce.number().int().positive().default(10),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),

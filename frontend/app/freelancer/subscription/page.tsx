@@ -19,7 +19,7 @@ import {
     CreditCard
 } from 'lucide-react'
 import { useUserContext } from '@/contexts/UserContext'
-import { ICPayWidget } from '@/components/payment/ICPayWidget'
+import StripeCheckout from '@/components/payment/StripeCheckout'
 import {
     Dialog,
     DialogContent,
@@ -505,19 +505,13 @@ export default function SubscriptionPage() {
                             </div>
 
                             {checkoutData && (
-                                <ICPayWidget
-                                    amountUsd={checkoutData.usdAmount}
-                                    metadata={{
-                                        email: profile?.email,
-                                        type: checkoutData.type,
-                                        plan: checkoutData.plan,
-                                        amount: checkoutData.amount
-                                    }}
+                                <StripeCheckout
+                                    endpoint="/api/payments/subscription"
+                                    payload={{ plan: checkoutData.plan }}
                                     onSuccess={handlePaymentSuccess}
                                     onError={(err) => {
-                                        console.error('Payment Widget Error:', err)
+                                        console.error('Payment error:', err)
                                     }}
-                                    buttonLabel={checkoutData.type === 'upgrade' ? `Pay $${checkoutData.usdAmount} to Upgrade` : `Confirm Order for $${checkoutData.usdAmount}`}
                                 />
                             )}
                         </div>

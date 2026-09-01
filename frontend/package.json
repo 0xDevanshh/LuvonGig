@@ -45,6 +45,8 @@
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@stripe/react-stripe-js": "^6.8.2",
+    "@stripe/stripe-js": "^9.15.0",
     "@types/markdown-it": "^14.1.2",
     "@types/pg": "^8.16.0",
     "@uiw/react-markdown-preview": "^5.1.5",

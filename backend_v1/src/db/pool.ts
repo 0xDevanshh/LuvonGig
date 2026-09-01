@@ -1,6 +1,27 @@
+import net from 'node:net';
 import pg from 'pg';
 import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
+
+/**
+ * Disable Node's "happy eyeballs" connection racing.
+ *
+ * Node 20+ enables autoSelectFamily by default: it resolves a host to both A
+ * and AAAA records and races connections to them. On some networks — including
+ * the one this was developed on — that path stalls and surfaces as
+ * `AggregateError: ETIMEDOUT` from `internalConnectMultiple`, even though the
+ * host is perfectly reachable (psql to the same URL connects instantly).
+ *
+ * It presents as intermittent database timeouts under load and is easy to
+ * misdiagnose as pool exhaustion or the provider suspending. Neon publishes
+ * only A records, so racing families buys nothing here.
+ *
+ * Set here rather than in server.ts because tests and the migration runner
+ * need it too, and every one of them imports this module.
+ */
+if (typeof net.setDefaultAutoSelectFamily === 'function') {
+  net.setDefaultAutoSelectFamily(false);
+}
 
 const { Pool, types } = pg;
 
@@ -23,7 +44,10 @@ export function getPool(): pg.Pool {
     // client connections than a direct Postgres would.
     max: env.isProduction ? 10 : 5,
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
+    // Generous, because a cold Neon compute can take several seconds to wake.
+    // `query` retries on top of this; a too-short timeout just turns a slow
+    // wake-up into a retry storm.
+    connectionTimeoutMillis: 30_000,
     // Neon closes idle connections; keepalive avoids surfacing that as an error.
     keepAlive: true,
   });
@@ -37,18 +61,69 @@ export function getPool(): pg.Pool {
 
 export type QueryParams = ReadonlyArray<unknown>;
 
-/** Run a single query on a pooled connection. */
+/**
+ * Failures that mean "the connection was not usable", as opposed to "the
+ * statement was wrong". Only these are worth retrying: a constraint violation
+ * or a syntax error will fail identically every time.
+ *
+ * Neon suspends compute after a period of inactivity, and the connection that
+ * wakes it can exceed connectionTimeoutMillis. That is a normal part of
+ * running on serverless Postgres, not an outage — but without a retry it
+ * surfaces as a 500 on the first request after any quiet period.
+ */
+function isTransientConnectionError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { message?: string; code?: string };
+  if (e.code === 'ECONNRESET' || e.code === 'ETIMEDOUT' || e.code === 'ECONNREFUSED') return true;
+  const message = e.message ?? '';
+  return (
+    message.includes('Connection terminated') ||
+    message.includes('connection timeout') ||
+    message.includes('Client has encountered a connection error') ||
+    message.includes('server closed the connection unexpectedly') ||
+    message.includes('terminating connection due to administrator command')
+  );
+}
+
+const RETRY_DELAYS_MS = [250, 1_000, 3_000];
+
+/**
+ * Run a single query on a pooled connection, retrying only connection-level
+ * failures.
+ *
+ * NOT safe for statements inside a transaction — a retry there would run
+ * against a different connection with no transaction open. `withTransaction`
+ * deliberately uses the raw client instead.
+ */
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params: QueryParams = [],
 ): Promise<pg.QueryResult<T>> {
   const startedAt = performance.now();
   try {
-    return await getPool().query<T>(text, params as unknown[]);
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        return await getPool().query<T>(text, params as unknown[]);
+      } catch (err) {
+        lastError = err;
+        if (!isTransientConnectionError(err) || attempt === RETRY_DELAYS_MS.length) break;
+
+        const delay = RETRY_DELAYS_MS[attempt]!;
+        logger.warn(
+          { attempt: attempt + 1, delayMs: delay, err: (err as Error).message },
+          'Transient database connection failure — retrying',
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError;
   } finally {
     const durationMs = performance.now() - startedAt;
-    if (durationMs > 500) {
-      logger.warn({ durationMs: Math.round(durationMs), sql: text.slice(0, 200) }, 'Slow query');
+    if (durationMs > 2_000) {
+      logger.warn({ durationMs: Math.round(durationMs), sql: text.slice(0, 120) }, 'Slow query');
     }
   }
 }

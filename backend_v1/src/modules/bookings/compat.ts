@@ -39,28 +39,15 @@ async function loadForParty(bookingId: string, userId: string) {
   return { booking, party: booking.client_id === userId ? ('client' as const) : ('freelancer' as const) };
 }
 
-compatRouter.post('/bookings/paid',
-  validateBody(z.object({ bookingId: z.string().min(1) }).passthrough()),
-  async (req, res, next) => {
-    try {
-      const { booking, party } = await loadForParty(req.body.bookingId, req.user!.userId);
-      if (party !== 'client') return next(forbidden('Only the client can confirm payment'));
-      if (booking.payment_status !== 'pending') {
-        return next(conflict('Payment has already been recorded for this booking'));
-      }
-
-      await withTransaction(async (client) => {
-        await repo.setPaymentStatus(client, booking.id, 'held_in_escrow');
-        if (booking.status === 'pending') await repo.setStatus(client, booking.id, 'active');
-        await repo.addTimelineEvent(client, booking.id, 'payment_completed', req.user!.userId,
-          'Payment recorded', {});
-      });
-
-      ok(res, toBookingDto((await repo.getBooking(booking.id))!));
-    } catch (err) {
-      next(err);
-    }
+// RETIRED (Phase 5): the legacy { bookingId, clientId } self-report. See the
+// note on bookingsRouter POST /:bookingId/paid.
+compatRouter.post('/bookings/paid', async (_req, res) => {
+  res.status(410).json({
+    success: false,
+    error: 'Confirming payment directly is no longer supported. Pay through /api/payments/intent.',
+    code: 'GONE',
   });
+});
 
 const bookingIdQuery = z.object({
   booking_id: z.string().min(1).optional(),
