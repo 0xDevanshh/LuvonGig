@@ -2,7 +2,27 @@ import { SignJWT, jwtVerify } from 'jose';
 import argon2 from 'argon2';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+/**
+ * No fallback, deliberately.
+ *
+ * This previously defaulted to a literal committed to the repository, so an
+ * environment that forgot to set JWT_SECRET signed its sessions with a value
+ * anyone reading the source could use to forge a token for any account. A
+ * missing secret must stop the process, not quietly downgrade it to a public
+ * one.
+ */
+function requireJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'JWT_SECRET is missing or too short (needs at least 32 characters). ' +
+        'Sessions cannot be signed safely without it.',
+    );
+  }
+  return secret;
+}
+
+const JWT_SECRET = requireJwtSecret();
 const JWT_ALGORITHM = 'HS256';
 const JWT_EXPIRES_IN = '7d';
 

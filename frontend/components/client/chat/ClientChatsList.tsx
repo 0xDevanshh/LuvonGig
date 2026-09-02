@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Search, MessageSquare, Briefcase, Calendar, DollarSign, Activity } from 'lucide-react'
-import { getBookingsByClientEmail, createChatRelationshipsFromBookings } from '../../../lib/marketplace-storage'
 import { getUserProfileByEmail, UserProfile } from '../../../lib/user-profile'
 
 interface BookingChat {

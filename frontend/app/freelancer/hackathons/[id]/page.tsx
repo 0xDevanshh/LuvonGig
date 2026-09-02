@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { getUserProfileByEmail } from '@/lib/user-profile';
-import { getPrincipalFromEmail } from '@/lib/principal-utils';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -125,7 +124,7 @@ export default function FreelancerHackathonDetail() {
           if (sessionData.success && sessionData.session?.email) {
             setUserEmail(sessionData.session.email);
             try {
-              const principal = getPrincipalFromEmail(sessionData.session.email);
+              const principal = sessionData.session.email;
               setUserPrincipal(principal.toText());
             } catch (err) {
               console.error('Failed to generate principal:', err);
@@ -169,10 +168,10 @@ export default function FreelancerHackathonDetail() {
 
       if (userEmail) {
         try {
-          const regResponse = await fetch(`/api/hackquest/participants/check-by-email?email=${encodeURIComponent(userEmail)}&hackathonId=${encodeURIComponent(hackathonId)}`);
+          const regResponse = await fetch(`/api/hackquest/hackathon/${encodeURIComponent(hackathonId)}`);
           if (regResponse.ok) {
             const regData = await regResponse.json();
-            setIsRegistered(regData.isRegisteredForHackathon || false);
+            setIsRegistered(regData.data?.registered || false);
           }
         } catch (error) {
           console.error('Error checking registration:', error);
@@ -192,9 +191,9 @@ export default function FreelancerHackathonDetail() {
     if (!hackathonId || !userEmail) return;
 
     try {
-      const principalToUse = userPrincipal || getPrincipalFromEmail(userEmail).toText();
+      const principalToUse = userPrincipal || userEmail;
 
-      const response = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}&principal=${encodeURIComponent(principalToUse)}`);
+      const response = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}`);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -365,7 +364,7 @@ export default function FreelancerHackathonDetail() {
       let leaderPrincipal = userPrincipal;
       if (!leaderPrincipal && userEmail) {
         try {
-          const checkResponse = await fetch(`/api/hackquest/participants/check-by-email?email=${encodeURIComponent(userEmail)}&hackathonId=${encodeURIComponent(hackathonId)}`);
+          const checkResponse = await fetch(`/api/hackquest/hackathon/${encodeURIComponent(hackathonId)}`);
           if (checkResponse.ok) {
             const checkData = await checkResponse.json();
             if (checkData.success && checkData.principal) {
@@ -433,7 +432,7 @@ export default function FreelancerHackathonDetail() {
       let leaderPrincipal = userPrincipal;
       if (!leaderPrincipal && userEmail) {
         try {
-          leaderPrincipal = getPrincipalFromEmail(userEmail).toText();
+          leaderPrincipal = userEmail;
           setUserPrincipal(leaderPrincipal);
         } catch (error) {
           console.warn('Could not generate principal from email:', error);
@@ -486,7 +485,7 @@ export default function FreelancerHackathonDetail() {
     let principalToUse = userPrincipal;
     if (!principalToUse) {
       try {
-        const checkResponse = await fetch(`/api/hackquest/participants/check-by-email?email=${encodeURIComponent(userEmail)}&hackathonId=${encodeURIComponent(hackathonId)}`);
+        const checkResponse = await fetch(`/api/hackquest/hackathon/${encodeURIComponent(hackathonId)}`);
         if (checkResponse.ok) {
           const checkData = await checkResponse.json();
           if (checkData.success && checkData.principal) {

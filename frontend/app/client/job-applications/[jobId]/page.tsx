@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { useUserContext } from '@/contexts/UserContext'
 import { getUserProfileByEmail } from '@/lib/user-profile'
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent'
+import { getJob } from '@/lib/api/jobs'
 
 export default function JobApplicationsPage({ params }: { params: Promise<{ jobId: string }> }) {
     const router = useRouter()
@@ -35,21 +35,11 @@ export default function JobApplicationsPage({ params }: { params: Promise<{ jobI
         try {
             const userProfileData = await getUserProfileByEmail(profile.email)
             const clientId = userProfileData.userId || profile.email
-            const actor = await getJobMarketplaceActor()
-
-            // Fetch Job Details
-            const jobResult = await actor.getJobById(jobId)
-            if (jobResult && jobResult.length > 0) {
-                setJob(serializeBigInts(jobResult[0]))
-            }
-
-            // Fetch Proposals
-            const propsResult = await actor.getProposalsByJob(jobId, clientId)
-            if ('ok' in propsResult) {
-                setProposals(serializeBigInts(propsResult.ok))
-            } else {
-                console.error('Error fetching proposals:', propsResult.err)
-            }
+            // One request: the job carries its proposals, scoped by the API
+            // to what this caller is allowed to see.
+            const data = await getJob(jobId)
+            setJob(data)
+            setProposals(data.proposals ?? [])
         } catch (error) {
             console.error('Error fetching data:', error)
         } finally {

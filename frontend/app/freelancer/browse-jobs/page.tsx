@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Loader2
 } from 'lucide-react'
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent'
+import { listJobs } from '@/lib/api/jobs'
 
 export default function BrowseJobsPage() {
   const router = useRouter()
@@ -34,25 +34,21 @@ export default function BrowseJobsPage() {
   const fetchJobs = async () => {
     setIsLoading(true)
     try {
-      const actor = await getJobMarketplaceActor()
+      // Plain query parameters. The canister took Candid `opt` values encoded
+      // as [x] / [] and returned BigInt that had to be unwrapped; neither
+      // survives the move to the API.
+      const { jobs: rows, total: count } = await listJobs({
+        limit,
+        offset,
+        skills: selectedSkills.length > 0 ? selectedSkills : undefined,
+        minBudget: budgetRange.min || undefined,
+        maxBudget: budgetRange.max || undefined,
+      })
 
-      const filter = {
-        skills: selectedSkills.length > 0 ? [selectedSkills] : [],
-        minBudget: budgetRange.min ? [BigInt(budgetRange.min)] : [],
-        maxBudget: budgetRange.max ? [BigInt(budgetRange.max)] : []
-      }
-
-      const result = await actor.getJobs(
-        filter.skills.length > 0 || filter.minBudget.length > 0 || filter.maxBudget.length > 0 ? [filter] : [],
-        BigInt(limit),
-        BigInt(offset)
-      )
-
-      const serialized = serializeBigInts(result)
-      setJobs(serialized.jobs)
-      setTotal(Number(serialized.total))
+      setJobs(rows)
+      setTotal(count)
     } catch (error) {
-      console.error('Error fetching jobs from ICP:', error)
+      console.error('Error fetching jobs:', error)
     } finally {
       setIsLoading(false)
     }

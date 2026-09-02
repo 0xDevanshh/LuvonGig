@@ -18,7 +18,7 @@ import {
     Briefcase,
     FileText
 } from 'lucide-react'
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent'
+import { getJob, setProposalStatus } from '@/lib/api/jobs'
 import { useUserContext } from '@/contexts/UserContext'
 import { getUserProfileByEmail } from '@/lib/user-profile'
 
@@ -41,23 +41,13 @@ export default function ManageProposalsPage() {
             const userProfileData = await getUserProfileByEmail(profile.email)
             const clientId = userProfileData.userId || profile.email
 
-            const actor = await getJobMarketplaceActor()
-
-            // Fetch Job Details
-            const jobResult = await actor.getJobById(jobId as string)
-            if (jobResult && jobResult.length > 0) {
-                setJob(serializeBigInts(jobResult[0]))
-            }
-
-            // Fetch Proposals
-            const propsResult = await actor.getProposalsByJob(jobId as string, clientId)
-            if ('ok' in propsResult) {
-                setProposals(serializeBigInts(propsResult.ok))
-            } else {
-                console.error('Error fetching proposals:', propsResult.err)
-            }
+            // One request: the job carries its proposals, and the API
+            // decides which of them this caller may see.
+            const data = await getJob(jobId as string)
+            setJob(data)
+            setProposals(data.proposals ?? [])
         } catch (error) {
-            console.error('Error fetching data from ICP:', error)
+            console.error('Error fetching job data:', error)
         } finally {
             setIsLoading(false)
         }
@@ -75,24 +65,17 @@ export default function ManageProposalsPage() {
             const userProfileData = await getUserProfileByEmail(profile.email)
             const clientId = userProfileData.userId || profile.email
 
-            const actor = await getJobMarketplaceActor()
-
-            // Map status string to variant
-            const statusVariant =
-                newStatus === 'SHORTLISTED' ? { SHORTLISTED: null } :
-                    newStatus === 'REJECTED' ? { REJECTED: null } : { PENDING: null }
-
-            const result = await actor.updateProposalStatus(proposalId, clientId, statusVariant)
-
-            if ('ok' in result) {
-                // Refresh data
-                await fetchData()
-            } else {
-                alert('Failed to update status: ' + result.err)
-            }
+            // A plain string, not a Candid variant. Ownership is checked
+            // server-side, so `clientId` is no longer sent.
+            await setProposalStatus(
+                jobId as string,
+                proposalId,
+                newStatus.toLowerCase() as 'pending' | 'shortlisted' | 'rejected',
+            )
+            await fetchData()
         } catch (error) {
             console.error('Error updating status:', error)
-            alert('Failed to update status. Please try again.')
+            alert(error instanceof Error ? error.message : 'Failed to update status. Please try again.')
         } finally {
             setIsUpdating(null)
         }

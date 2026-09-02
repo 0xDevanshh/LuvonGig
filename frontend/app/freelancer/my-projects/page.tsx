@@ -120,7 +120,7 @@ export default function MyProjectsPage() {
 
   const bookingEarnings = bookings
     .filter(b => b.status === 'Completed')
-    .reduce((sum, b) => sum + Number(b.total_amount_e8s || 0), 0);
+    .reduce((sum, b) => sum + Number(b.total_minor || 0), 0);
 
   const totalEarnings = bookingEarnings; // Job projects budget is in unknown units (dollars probably), so skipping for now in ICP stats
 
@@ -188,7 +188,7 @@ export default function MyProjectsPage() {
                       </div>
                       <div className="flex items-center space-x-4">
                         <Badge className={getStatusColor(booking.status)}>{getStatusIcon(booking.status)} <span className="ml-1">{getStatusString(booking.status)}</span></Badge>
-                        <span className="font-semibold">{(Number(booking.total_amount_e8s || 0) / 100000000).toFixed(6)} ICP</span>
+                        <span className="font-semibold">{(Number(booking.total_minor || 0) / 100000000).toFixed(6)} ICP</span>
                         <Button onClick={() => router.push(`/freelancer/project-details/${booking.booking_id}`)} variant="outline">View</Button>
                       </div>
                     </CardContent>

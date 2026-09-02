@@ -152,7 +152,7 @@ export default function ClientDashboard() {
     let ratingsCount = 0
 
     bookings.forEach(booking => {
-      const amount = Number(booking.total_amount_e8s) / 100000000 // Convert e8s to ICP
+      const amount = Number(booking.total_minor) / 100000000 // Convert e8s to ICP
 
       // Total spent (completed bookings with released payment status)
       const isCompleted = booking.status === 'Completed'
@@ -239,7 +239,7 @@ export default function ClientDashboard() {
         id: booking.booking_id,
         freelancer_name: booking.freelancer_name || booking.freelancer_id.split('@')[0],
         service_title: booking.service_title || 'Service',
-        amount: Number(booking.total_amount_e8s) / 100000000,
+        amount: Number(booking.total_minor) / 100000000,
         status: mapBookingStatus(booking.status),
         created_at: (() => {
           try {

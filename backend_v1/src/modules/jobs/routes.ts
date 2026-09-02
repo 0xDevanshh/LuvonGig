@@ -232,6 +232,45 @@ export async function acceptProposal(
   return (await repo.getJob(job.id))!;
 }
 
+/**
+ * Shortlist or reject a bid.
+ *
+ * Accepting is deliberately NOT available here — that assigns the job and
+ * rejects every other bid, so it goes through accept-proposal where those
+ * three writes share a transaction.
+ */
+jobsRouter.put('/:jobId/proposals/:proposalId', requireAuth,
+  validateBody(z.object({
+    status: z.enum(['pending', 'shortlisted', 'rejected', 'PENDING', 'SHORTLISTED', 'REJECTED'])
+      .transform((v) => v.toLowerCase() as 'pending' | 'shortlisted' | 'rejected'),
+  })),
+  async (req, res, next) => {
+    try {
+      const jobId = param(req, 'jobId');
+      const proposalId = param(req, 'proposalId');
+
+      const job = await repo.getJob(jobId);
+      if (!job) return next(notFound('Job not found'));
+      // Only the client who posted the job triages its bids.
+      if (job.client_id !== req.user!.userId) {
+        return next(forbidden('Only the client who posted this job can update a proposal'));
+      }
+
+      const proposal = await repo.getProposal(proposalId);
+      if (!proposal || proposal.job_id !== jobId) return next(notFound('Proposal not found'));
+      if (proposal.status === 'accepted') {
+        return next(conflict('An accepted proposal cannot be changed'));
+      }
+
+      await withTransaction((client) =>
+        repo.setProposalStatus(client, proposalId, req.body.status));
+
+      ok(res, toProposalDto((await repo.getProposal(proposalId))!));
+    } catch (err) {
+      next(err);
+    }
+  });
+
 jobsRouter.post('/:jobId/accept-proposal', requireAuth,
   validateBody(z.object({ proposalId: z.string().min(1) })),
   async (req, res, next) => {

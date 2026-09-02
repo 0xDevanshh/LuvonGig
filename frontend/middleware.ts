@@ -1,18 +1,55 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Define protected routes
-const protectedRoutes = ['/dashboard', '/profile'];
+/**
+ * Pages that require a session.
+ *
+ * This previously listed only /dashboard and /profile, which left every
+ * /freelancer/* and /client/* page — the entire signed-in application —
+ * reachable without one. The API routes behind them do enforce authentication,
+ * so this was not a data leak, but a signed-out visitor got a broken shell of
+ * a page and a burst of failed requests instead of a login redirect.
+ *
+ * Note this is a redirect for humans, not an authorization boundary. The
+ * cookie's presence is checked, not its signature — verifying the JWT here
+ * would run on every navigation. Authorization belongs to the API, which
+ * verifies the session on every request.
+ */
+const protectedRoutes = [
+  '/dashboard',
+  '/profile',
+  '/freelancer',
+  '/client',
+  '/admin',
+  '/onboarding',
+  '/expert/dashboard',
+  '/expert/register',
+];
+
+/**
+ * Carved out of the prefixes above: marketplace discovery is public by design.
+ * The services, jobs and hackathon list endpoints use optional authentication
+ * (`attachUser`, not `requireAuth`) precisely so a signed-out visitor can
+ * browse before creating an account. Gating these would be a product
+ * regression dressed up as a security fix.
+ */
+const publicRoutes = [
+  '/client/browse-services',
+  '/client/service',
+  '/client/hackathons',
+];
+
 const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password'];
 
 export function middleware(request: NextRequest) {
   try {
     const { pathname } = request.nextUrl;
 
-    // Check if the route is protected
-    const isProtectedRoute = protectedRoutes.some(route =>
-      pathname.startsWith(route)
-    );
+    // Public routes win over the protected prefixes they sit inside.
+    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+    const isProtectedRoute =
+      !isPublicRoute && protectedRoutes.some(route => pathname.startsWith(route));
 
     // Check if the route is an auth route
     const isAuthRoute = authRoutes.some(route =>

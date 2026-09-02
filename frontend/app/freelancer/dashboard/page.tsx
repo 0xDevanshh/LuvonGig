@@ -143,7 +143,7 @@ export default function DashboardHome() {
 
     // Process bookings
     bookings.forEach(booking => {
-      const amountICP = Number(booking.total_amount_e8s || 0) / 100000000
+      const amountICP = Number(booking.total_minor || 0) / 100000000
       if (booking.status === 'Completed') {
         totalEarnings += amountICP
         completedProjects++
@@ -189,7 +189,7 @@ export default function DashboardHome() {
 
     // Combine and transform recent projects
     const serviceItems = (bookings || []).map(b => {
-      const icp = Number(b.total_amount_e8s || 0) / 100000000;
+      const icp = Number(b.total_minor || 0) / 100000000;
       let date = new Date();
       try {
         let ts = Number(b.created_at);

@@ -3,71 +3,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Plus, Search, Edit, Trash2, Users, MapPin, Clock, DollarSign, Eye, Settings, AlertCircle, CheckCircle, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Actor, HttpAgent } from '@dfinity/agent';
-import { Principal } from '@dfinity/principal';
-import { IDL } from '@dfinity/candid';
-import { getPrincipalFromEmail } from '@/lib/principal-utils';
 
 const CANISTER_ID = process.env.NEXT_PUBLIC_HACKATHON_CANISTER_ID ?? '';
 const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST ?? ''; // Use testnet directly
 
-const hackquestIdl = ({ IDL }: typeof import('@dfinity/candid')) => {
-  const HackathonStatus = IDL.Variant({
-    Draft: IDL.Null,
-    Upcoming: IDL.Null,
-    Ongoing: IDL.Null,
-    Judging: IDL.Null,
-    Completed: IDL.Null,
-    Cancelled: IDL.Null,
-  });
-
-  return IDL.Service({
-    updateHackathonStatus: IDL.Func(
-      [IDL.Text, HackathonStatus, IDL.Principal],
-      [IDL.Variant({ ok: IDL.Record({
-        id: IDL.Text,
-        organizer: IDL.Principal,
-        title: IDL.Text,
-        tagline: IDL.Text,
-        summary: IDL.Text,
-        bannerUrl: IDL.Text,
-        heroVideoUrl: IDL.Text,
-        location: IDL.Text,
-        theme: IDL.Text,
-        prizePool: IDL.Nat64,
-        faq: IDL.Vec(IDL.Text),
-        resources: IDL.Vec(IDL.Text),
-        minTeamSize: IDL.Nat,
-        maxTeamSize: IDL.Nat,
-        maxTeamsPerCategory: IDL.Nat,
-        submissionsOpenAt: IDL.Int,
-        submissionsCloseAt: IDL.Int,
-        startAt: IDL.Int,
-        endAt: IDL.Int,
-        createdAt: IDL.Int,
-        status: HackathonStatus,
-        categories: IDL.Vec(IDL.Text),
-        rewards: IDL.Vec(IDL.Text),
-      }), err: IDL.Variant({
-        NotFound: IDL.Text,
-        NotAuthorized: IDL.Null,
-        ValidationError: IDL.Text,
-        InvalidState: IDL.Text,
-      })}),
-      ],
-      []
-    ),
-  });
-};
-
-const createHackquestActor = async () => {
-  const agent = new HttpAgent({ host: IC_HOST });
-  const actor = Actor.createActor(hackquestIdl as any, {
-    agent,
-    canisterId: Principal.fromText(CANISTER_ID),
-  });
-  return actor;
-};
 
 
 interface HackathonWithActions {
@@ -89,7 +28,7 @@ interface HackathonWithActions {
   registration_end: string;
   min_team_size: number;
   max_team_size: number;
-  status: { Draft?: null; Upcoming?: null; Ongoing?: null; Judging?: null; Completed?: null; Cancelled?: null };
+  status: string;
   created_at: string;
   updated_at: string;
   organizer: string;
@@ -212,7 +151,7 @@ export default function ClientHackathonsPage() {
         (statusFilter === 'upcoming' && now < startDate) ||
         (statusFilter === 'ongoing' && now >= startDate && now <= endDate) ||
         (statusFilter === 'completed' && now > endDate) ||
-        (statusFilter === 'cancelled' && hackathon.status.Cancelled !== null && hackathon.status.Cancelled !== undefined);
+        (statusFilter === 'cancelled' && hackathon.status?.toLowerCase() === 'cancelled');
 
       return matchesSearch && matchesStatus;
     });
@@ -260,8 +199,8 @@ export default function ClientHackathonsPage() {
       console.log('🗑️ Deleting hackathon:', hackathonId);
       if (!userEmail) return;
       
-      const organizerPrincipal = getPrincipalFromEmail(userEmail).toText();
-      const response = await fetch(`/api/hackquest/hackathon/${hackathonId}?organizer=${encodeURIComponent(organizerPrincipal)}`, {
+      const organizerPrincipal = userEmail;
+      const response = await fetch(`/api/hackquest/hackathon/${hackathonId}`, {
         method: 'DELETE',
       });
       
@@ -285,41 +224,29 @@ export default function ClientHackathonsPage() {
       const hackathon = hackathons.find(h => h.hackathon_id === hackathonId);
       if (!hackathon) return;
 
-      // Determine next status based on current status
-      let newStatus: { Draft?: null; Upcoming?: null; Ongoing?: null; Judging?: null; Completed?: null; Cancelled?: null };
-      if (hackathon.status.Draft !== null && hackathon.status.Draft !== undefined) {
-        newStatus = { Upcoming: null };
-      } else if (hackathon.status.Upcoming !== null && hackathon.status.Upcoming !== undefined) {
-        newStatus = { Ongoing: null };
-      } else if (hackathon.status.Ongoing !== null && hackathon.status.Ongoing !== undefined) {
-        newStatus = { Judging: null };
-      } else if (hackathon.status.Judging !== null && hackathon.status.Judging !== undefined) {
-        newStatus = { Completed: null };
-      } else {
-        newStatus = { Upcoming: null };
-      }
+      // The API sends and accepts a plain status string. Candid encoded this
+      // as a single-key variant, which is why the old code compared
+      // `status.Draft !== null` and built `{ Upcoming: null }` objects.
+      const NEXT_STATUS: Record<string, string> = {
+        draft: 'upcoming',
+        upcoming: 'ongoing',
+        ongoing: 'judging',
+        judging: 'completed',
+      };
+      const current = String(hackathon.status ?? '').toLowerCase();
+      const newStatus = NEXT_STATUS[current] ?? 'upcoming';
 
-      const actor: any = await createHackquestActor();
-      if (!userEmail) {
-        alert('You must be logged in to update status');
-        return;
-      }
-      const organizerPrincipal = getPrincipalFromEmail(userEmail);
-      const result = await actor.updateHackathonStatus(hackathonId, newStatus, organizerPrincipal);
+      const res = await fetch(`/api/hackquest/hackathon/${encodeURIComponent(hackathonId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const body = await res.json();
 
-      if ('err' in result) {
-        const error = result.err;
-        if ('NotFound' in error) {
-          throw new Error(error.NotFound);
-        } else if ('NotAuthorized' in error) {
-          throw new Error('You are not authorized to update this hackathon');
-        } else if ('ValidationError' in error) {
-          throw new Error(error.ValidationError);
-        } else if ('InvalidState' in error) {
-          throw new Error(error.InvalidState);
-        } else {
-          throw new Error('Unknown error occurred');
-        }
+      if (!res.ok || !body.success) {
+        // Ownership is checked server-side; the canister returned a variant
+        // of error cases that had to be unwrapped one by one.
+        throw new Error(body.error || 'Failed to update hackathon status');
       }
 
       // Update local state
@@ -347,7 +274,7 @@ export default function ClientHackathonsPage() {
       return { text: 'Unknown', color: 'bg-gray-100 text-gray-800', icon: AlertCircle };
     }
 
-    if (hackathon.status?.Cancelled !== undefined && hackathon.status?.Cancelled !== null) {
+    if (hackathon.status?.toLowerCase() === 'cancelled') {
       return { text: 'Cancelled', color: 'bg-red-100 text-red-800', icon: AlertCircle };
     }
 

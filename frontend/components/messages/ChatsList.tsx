@@ -93,84 +93,30 @@ export function ChatsList({
       }
 
       // Import marketplace storage functions
-      const { getBookingsByFreelancerEmail, createChatRelationshipsFromBookings } = await import('@/lib/marketplace-storage')
-      const { getUserProfileByEmail } = await import('@/lib/user-profile')
+      // One request. This used to fetch bookings, kick off chat-relationship
+      // creation, then fetch every counterparty's profile individually and
+      // dedupe them in the browser — all of which /api/chat/booking-contacts
+      // now does in a single query, scoped to the signed-in user.
+      const res = await fetch('/api/chat/booking-contacts')
+      const body = await res.json()
 
-      // Get bookings for freelancer
-      const bookings = await getBookingsByFreelancerEmail(userEmail)
-      console.log('[ChatsList] Loaded bookings for freelancer:', bookings?.length || 0)
-
-      if (!bookings || bookings.length === 0) {
+      if (!res.ok || !body.success) {
+        console.warn('[ChatsList] Could not load booking contacts:', body.error)
         setBookingContacts([])
         return
       }
 
-      // Create chat relationships from bookings (non-blocking)
-      createChatRelationshipsFromBookings(bookings).catch(err => {
-        console.warn('[ChatsList] Error creating chat relationships (non-critical):', err)
-      })
-
-      // Extract unique client emails from bookings
-      const uniqueClientEmails = [...new Set(bookings.map(booking => booking.client_email).filter(Boolean))]
-      console.log('[ChatsList] Fetching profiles for clients:', uniqueClientEmails.length)
-
-      if (uniqueClientEmails.length === 0) {
-        setBookingContacts([])
-        return
-      }
-
-      // Fetch client profiles with timeout
-      const clientProfiles = await Promise.allSettled(
-        uniqueClientEmails.map(email => 
-          Promise.race([
-            getUserProfileByEmail(email),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-            )
-          ])
-        )
-      )
-
-      // Create a map of email to profile
-      const profileMap = new Map<string, any>()
-      clientProfiles.forEach((result, index) => {
-        const email = uniqueClientEmails[index]
-        if (result.status === 'fulfilled') {
-          profileMap.set(email, result.value)
-          console.log('[ChatsList] ✅ Got profile for client:', email)
-        } else {
-          console.warn('[ChatsList] ⚠️ Failed to fetch profile for:', email, result.reason)
-        }
-      })
-
-      // Extract unique client contacts from bookings with real profile data
-      const uniqueContacts = bookings.reduce((contacts: any[], booking: any) => {
-        const clientEmail = booking.client_email
-        if (!clientEmail) return contacts
-
-        const existingContact = contacts.find(c => c.email === clientEmail)
-
-        if (!existingContact) {
-          const clientProfile = profileMap.get(clientEmail)
-
-          // Use real profile data or fallback to email-based name
-          const displayName = clientProfile?.displayName ||
-                            (clientProfile?.firstName ? clientProfile.firstName + (clientProfile?.lastName ? ' ' + clientProfile.lastName : '') : '') ||
-                            clientEmail.split('@')[0].charAt(0).toUpperCase() + clientEmail.split('@')[0].slice(1)
-
-          contacts.push({
-            email: clientEmail,
-            name: displayName,
-            type: 'client' as const,
-            profile: clientProfile,
-            serviceTitle: booking.service_title || 'Service',
-            bookingId: booking.booking_id,
-            status: booking.status || 'Active'
-          })
-        }
-
-        return contacts
-      }, [])
+      const uniqueContacts = (body.data ?? []).map((c: {
+        email: string; name: string; booking_id: string; service_title: string;
+      }) => ({
+        email: c.email,
+        name: c.name || c.email.split('@')[0],
+        type: 'client' as const,
+        profile: null,
+        serviceTitle: c.service_title || 'Service',
+        bookingId: c.booking_id,
+        status: 'Active',
+      }))
 
       console.log('[ChatsList] Created booking contacts:', uniqueContacts.length)
       setBookingContacts(uniqueContacts)

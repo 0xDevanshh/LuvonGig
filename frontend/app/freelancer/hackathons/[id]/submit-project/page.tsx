@@ -12,7 +12,6 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { getPrincipalFromEmail } from '@/lib/principal-utils';
 
 interface Team {
   id: string;
@@ -80,12 +79,9 @@ export default function SubmitProjectPage() {
     const getPrincipal = async () => {
       if (!userEmail) return;
 
-      try {
-        const principal = getPrincipalFromEmail(userEmail);
-        setUserPrincipal(principal.toText());
-      } catch (error) {
-        console.error('Error getting principal:', error);
-      }
+      // Identity is the session's; this state only exists so the UI can
+      // compare "is this me" against ids the API returns.
+      setUserPrincipal(userEmail);
     };
 
     if (userEmail) {
@@ -129,7 +125,7 @@ export default function SubmitProjectPage() {
         setLoading(true);
         setError(null);
 
-        const teamsResponse = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}&principal=${encodeURIComponent(userPrincipal)}`);
+        const teamsResponse = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}`);
         if (teamsResponse.ok) {
           const teamsData = await teamsResponse.json();
           if (teamsData.success) {
@@ -322,7 +318,7 @@ export default function SubmitProjectPage() {
                               const updateResult = await updateResponse.json();
                               if (updateResult.success) {
                                 // Reload team data
-                                const teamsResponse = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}&principal=${encodeURIComponent(userPrincipal)}`);
+                                const teamsResponse = await fetch(`/api/hackquest/teams?hackathonId=${encodeURIComponent(hackathonId)}`);
                                 if (teamsResponse.ok) {
                                   const teamsData = await teamsResponse.json();
                                   if (teamsData.success) {

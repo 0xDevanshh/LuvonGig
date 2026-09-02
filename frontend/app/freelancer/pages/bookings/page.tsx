@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatICP } from '@/lib/ic-marketplace-agent';
+import { formatMoney } from '@/lib/currency';
 import { 
   Clock, 
   CheckCircle, 
@@ -190,7 +190,7 @@ export default function FreelancerBookings() {
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-semibold text-[#0B1F36]">
-                        {formatICP(BigInt(booking.escrow_amount_e8s))}
+                        {formatMoney(booking.amount_minor)}
                       </div>
                       <div className="text-sm text-gray-500">
                         {new Date(booking.created_at / 1000000).toLocaleDateString()}
@@ -256,7 +256,7 @@ export default function FreelancerBookings() {
                             </p>
                             <div className="flex items-center justify-between mt-3">
                               <div className="text-sm font-semibold text-[#0B1F36]">
-                                {formatICP(BigInt(stage.amount_e8s))}
+                                {formatMoney(stage.amount_minor)}
                               </div>
                               <div className="flex gap-2">
                                 {stage.status === 'Pending' && (
@@ -380,7 +380,7 @@ function StageForm({
   onCancel: () => void; 
 }) {
   const [stages, setStages] = useState([
-    { title: '', description: '', amount_e8s: 0 }
+    { title: '', description: '', amount_minor: 0 }
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -389,7 +389,7 @@ function StageForm({
   };
 
   const addStage = () => {
-    setStages([...stages, { title: '', description: '', amount_e8s: 0 }]);
+    setStages([...stages, { title: '', description: '', amount_minor: 0 }]);
   };
 
   const updateStage = (index: number, field: string, value: any) => {
@@ -443,8 +443,8 @@ function StageForm({
                     <input
                       type="number"
                       step="0.01"
-                      value={stage.amount_e8s / 100_000_000}
-                      onChange={(e) => updateStage(index, 'amount_e8s', Math.floor(parseFloat(e.target.value || '0') * 100_000_000))}
+                      value={stage.amount_minor / 100_000_000}
+                      onChange={(e) => updateStage(index, 'amount_minor', Math.floor(parseFloat(e.target.value || '0') * 100_000_000))}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2"
                       required
                     />

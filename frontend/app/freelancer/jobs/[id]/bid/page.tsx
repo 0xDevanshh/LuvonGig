@@ -18,7 +18,7 @@ import {
     Briefcase,
     Activity
 } from 'lucide-react'
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent'
+import { getJob } from '@/lib/api/jobs'
 import { useUserContext } from '@/contexts/UserContext'
 import { getUserProfileByEmail } from '@/lib/user-profile'
 import { useToast } from '@/contexts/ToastContext'
@@ -43,11 +43,10 @@ export default function BidSubmissionPage() {
     useEffect(() => {
         const fetchJob = async () => {
             try {
-                const actor = await getJobMarketplaceActor()
-                const result = await actor.getJobById(jobId as string)
-                if (result && result.length > 0) {
-                    setJob(serializeBigInts(result[0]))
-                }
+                // The API returns the job directly. Candid wrapped an
+                // optional as a one-or-zero element array, hence the old
+                // `result.length > 0 ? result[0]` unwrapping.
+                setJob(await getJob(jobId as string))
             } catch (error) {
                 console.error('Error fetching job details:', error)
             } finally {

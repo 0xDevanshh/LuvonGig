@@ -314,11 +314,11 @@ export default function MyServices() {
     if (service.packages && service.packages.length > 0) {
       try {
         const prices = service.packages
-          .filter((pkg: any) => pkg.price_e8s && pkg.status === 'Available')
+          .filter((pkg: any) => pkg.price_minor && pkg.status === 'Available')
           .map((pkg: any) => {
-            const price = typeof pkg.price_e8s === 'string'
-              ? parseFloat(pkg.price_e8s) / 100000000
-              : Number(pkg.price_e8s) / 100000000;
+            const price = typeof pkg.price_minor === 'string'
+              ? parseFloat(pkg.price_minor) / 100000000
+              : Number(pkg.price_minor) / 100000000;
             return price;
           });
 

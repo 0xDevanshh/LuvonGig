@@ -6,7 +6,7 @@ import { usePackages, useBookPackage } from '@/hooks/useMarketplace';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatICP } from '@/lib/ic-marketplace-agent';
+import { formatMoney } from '@/lib/currency';
 import {
   CheckCircle,
   Clock,
@@ -174,7 +174,7 @@ export default function BookingPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-[#0B1F36]">
-                      {formatICP(selectedPackage.price_e8s)}
+                      {formatMoney(selectedPackage.price_minor)}
                     </div>
                     <div className="text-sm text-gray-500">
                       {selectedPackage.delivery_days} days delivery
@@ -245,7 +245,7 @@ export default function BookingPage() {
                   {bookingResult && (
                     <div className="text-sm text-green-700 mb-4">
                       <div>Booking ID: {bookingResult.booking_id}</div>
-                      <div>Amount: {formatICP(bookingResult.amount_e8s)}</div>
+                      <div>Amount: {formatMoney(bookingResult.amount_minor)}</div>
                       {bookingResult.ledger_block && (
                         <div>Transaction: {bookingResult.ledger_block.toString()}</div>
                       )}
@@ -288,19 +288,19 @@ export default function BookingPage() {
                   <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-medium">Package Price</span>
-                      <span className="font-semibold">{formatICP(selectedPackage.price_e8s)}</span>
+                      <span className="font-semibold">{formatMoney(selectedPackage.price_minor)}</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm text-gray-600">Platform Fee ({Math.round(freelancerFee * 100)}%)</span>
                       <span className="text-sm text-gray-600">
-                        {formatICP(BigInt(Math.floor(Number(selectedPackage.price_e8s) * freelancerFee)))}
+                        {formatMoney(BigInt(Math.floor(Number(selectedPackage.price_minor) * freelancerFee)))}
                       </span>
                     </div>
                     <div className="border-t border-gray-300 pt-2">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Total</span>
                         <span className="font-bold text-lg">
-                          {formatICP(BigInt(Math.floor(Number(selectedPackage.price_e8s) * (1 + freelancerFee))))}
+                          {formatMoney(BigInt(Math.floor(Number(selectedPackage.price_minor) * (1 + freelancerFee))))}
                         </span>
                       </div>
                     </div>

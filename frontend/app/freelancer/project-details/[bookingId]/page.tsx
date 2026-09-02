@@ -10,8 +10,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatICP } from '@/lib/ic-marketplace-agent';
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent';
+import { formatMoney } from '@/lib/currency';
+import { getJob } from '@/lib/api/jobs';
 
 interface BookingDetails {
   booking_id: string;
@@ -20,7 +20,7 @@ interface BookingDetails {
   service_id: string;
   service_title: string;
   status: string;
-  total_amount_e8s: number;
+  total_minor: number;
   total_amount_dollars: number;
   client_notes: string;
   special_instructions: string;
@@ -111,11 +111,9 @@ export default function ProjectDetailsPage() {
 
       if (bookingId.startsWith('job_') || bookingId.startsWith('JOB_')) {
         const jobId = bookingId.replace('job_', '');
-        const actor = await getJobMarketplaceActor();
-        const result = await actor.getJobById(jobId);
+        const job = await getJob(jobId);
 
-        if (result && result.length > 0) {
-          const job = serializeBigInts(result[0]);
+        if (job) {
 
           // Map Job to BookingDetails compatible object
           const mappedBooking: BookingDetails = {
@@ -125,7 +123,7 @@ export default function ProjectDetailsPage() {
             service_id: 'job-marketplace',
             service_title: job.title,
             status: job.status,
-            total_amount_e8s: Number(job.budgetAmount),
+            total_minor: Number(job.budget_minor),
             total_amount_dollars: 0,
             client_notes: job.description,
             special_instructions: '',
@@ -464,9 +462,9 @@ export default function ProjectDetailsPage() {
                     <p className="text-sm font-medium text-gray-600">Project Value</p>
                     <p className="text-2xl font-bold text-gray-900">
                       {(() => {
-                        const amountE8s = typeof booking.total_amount_e8s === 'bigint'
-                          ? Number(booking.total_amount_e8s)
-                          : booking.total_amount_e8s || 0;
+                        const amountE8s = typeof booking.total_minor === 'bigint'
+                          ? Number(booking.total_minor)
+                          : booking.total_minor || 0;
                         const amountICP = amountE8s / 100000000;
                         return `${amountICP.toFixed(8)} ICP`;
                       })()}

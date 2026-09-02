@@ -15,7 +15,6 @@ import { compatRouter } from './modules/bookings/compat.js';
 import { statsRouter } from './modules/stats/routes.js';
 import { jobsRouter, acceptProposalRouter } from './modules/jobs/routes.js';
 import { hackathonsRouter, teamsRouter, submissionsRouter } from './modules/hackathons/routes.js';
-import { hackquestCompatRouter } from './modules/hackathons/compat.js';
 import { paymentsRouter } from './modules/payments/routes.js';
 import { purposesRouter } from './modules/payments/purposes.js';
 import { chatRouter, chatHealthRouter } from './modules/chat/routes.js';
@@ -73,7 +72,6 @@ export function createApp() {
   app.use('/api/hackathons', hackathonsRouter);
   app.use('/api/teams', teamsRouter);
   app.use('/api/submissions', submissionsRouter);
-  app.use('/api/compat/hackquest', hackquestCompatRouter);
 
   app.use('/api/payments', paymentsRouter);
   app.use('/api/payments', purposesRouter);

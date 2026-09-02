@@ -66,16 +66,11 @@ export default function ViewProjectPage() {
         const sessionResponse = await fetch('/api/auth/session');
         if (sessionResponse.ok) {
           const sessionData = await sessionResponse.json();
-          if (sessionData.success && sessionData.session?.email) {
-            const principalResponse = await fetch(
-              `/api/hackquest/participants/email-to-principal?email=${encodeURIComponent(sessionData.session.email)}`
-            );
-            if (principalResponse.ok) {
-              const principalData = await principalResponse.json();
-              if (principalData.success && principalData.principal) {
-                setUserPrincipal(principalData.principal);
-              }
-            }
+          if (sessionData.success && sessionData.session?.userId) {
+            // The session already carries the id this page compares against.
+            // It used to fetch an email-to-principal translation, which only
+            // existed because identity was an IC Principal.
+            setUserPrincipal(sessionData.session.userId);
           }
         }
       } catch (error) {

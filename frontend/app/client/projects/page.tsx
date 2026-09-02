@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { useBookings, useJobProjects } from '@/hooks/useMarketplace';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { formatICP } from '@/lib/ic-marketplace-agent';
+import { formatMoney } from '@/lib/currency';
 import { formatBookingDate, formatBookingDateShort, formatRelativeTime, isOverdue, getTimeRemaining } from '@/lib/date-utils';
 import {
   Clock,
@@ -54,7 +54,7 @@ export default function ClientProjects() {
       title: b.service_title || 'Service Project',
       type: 'service',
       displayStatus: getStatusString(b.status),
-      amount: Number(b.total_amount_e8s) / 100000000,
+      amount: Number(b.total_minor) / 100000000,
       createdAt: Number(b.created_at),
       freelancer: b.freelancer_email || b.freelancer_id
     }));
@@ -211,117 +211,23 @@ export default function ClientProjects() {
     setProcessingEscrow(prev => ({ ...prev, [escrowId]: 'releasing' }));
 
     try {
-      // Check if Plug wallet is available
-      if (typeof window === 'undefined' || !(window as any).ic?.plug) {
-        throw new Error('Plug wallet not found. Please install Plug wallet extension.');
-      }
-
-      const plug = (window as any).ic.plug;
-      const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST || 'https://icp0.io';
-      const escrowCanisterId = process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID;
-
-      if (!escrowCanisterId) {
-        throw new Error('Escrow canister ID not configured');
-      }
-
-      // Ensure wallet is connected
-      const isConnected = await plug.isConnected();
-      if (!isConnected) {
-        const connected = await plug.requestConnect({
-          whitelist: [escrowCanisterId],
-          host: IC_HOST,
-        });
-        if (!connected) {
-          throw new Error('Wallet connection was cancelled or failed');
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Get agent from Plug
-      let agent = plug.agent || plug.createAgent?.() || plug.getAgent?.();
-      if (!agent) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        agent = plug.agent;
-      }
-
-      if (!agent) {
-        throw new Error('Failed to get wallet agent');
-      }
-
-      // Fetch root key for localhost
-      if (IC_HOST.includes('localhost') || IC_HOST.includes('127.0.0.1')) {
-        try {
-          await agent.fetchRootKey();
-        } catch (e) {
-          // Ignore
-        }
-      }
-
-      // Create escrow actor with Plug's agent
-      const { Actor } = await import('@dfinity/agent');
-      const { Principal } = await import('@dfinity/principal');
-      const { idlFactory: escrowIdlFactory } = await import('@/lib/declarations/escrow/escrow.did.js');
-
-      const canisterId = Principal.fromText(escrowCanisterId);
-      const escrowActor = Actor.createActor(escrowIdlFactory, {
-        agent,
-        canisterId,
+      // Release is one authenticated request now. This previously connected
+      // Plug, built an escrow actor from a Candid IDL, read the escrow, worked
+      // out the service price and called escrow.release() — roughly 100 lines
+      // of wallet plumbing in the browser. Whether the caller may release is
+      // decided server-side; only the client who paid can.
+      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
+      const body = await res.json();
 
-      // Get service price - try to get from booking data
-      // First, try to get booking by escrow projectId
-      let servicePriceE8s: bigint;
-      try {
-        // Get escrow to find projectId
-        const escrowData: any = await escrowActor.get(escrowId);
-        const projectId = escrowData.projectId;
-
-        // Try to fetch booking data
-        const bookingResponse = await fetch(`/api/marketplace/bookings/${projectId}`);
-        const bookingData = await bookingResponse.json();
-
-        if (bookingData.success && bookingData.data?.base_amount_e8s) {
-          servicePriceE8s = BigInt(bookingData.data.base_amount_e8s);
-
-        } else {
-          // Calculate from expected amount
-          const NETWORK_TRANSFER_FEE_E8S = BigInt(40000);
-          const expectedE8s = BigInt(escrowData.expectedE8s || 0);
-          if (expectedE8s > NETWORK_TRANSFER_FEE_E8S) {
-            const amountAfterNetworkFee = expectedE8s - NETWORK_TRANSFER_FEE_E8S;
-            servicePriceE8s = (amountAfterNetworkFee * BigInt(100)) / BigInt(105);
-
-          } else {
-            throw new Error('Invalid escrow amount');
-          }
-        }
-      } catch (error: any) {
-        console.warn('⚠️ Could not get service price, calculating from escrow:', error.message);
-        // Fallback: get escrow and calculate
-        const escrowData: any = await escrowActor.get(escrowId);
-        const NETWORK_TRANSFER_FEE_E8S = BigInt(40000);
-        const expectedE8s = BigInt(escrowData.expectedE8s || 0);
-        if (expectedE8s > NETWORK_TRANSFER_FEE_E8S) {
-          const amountAfterNetworkFee = expectedE8s - NETWORK_TRANSFER_FEE_E8S;
-          servicePriceE8s = (amountAfterNetworkFee * BigInt(100)) / BigInt(105);
-        } else {
-          throw new Error('Invalid escrow amount: cannot calculate service price');
-        }
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Could not release the payment');
       }
 
-      // Call release function directly with service price
-      const result: any = await escrowActor.release(escrowId, servicePriceE8s);
-
-      if ('err' in result) {
-        throw new Error(result.err);
-      }
-
-      // Success - refresh status and bookings
+      alert('Payment released to the freelancer.');
       await fetchEscrowStatus(escrowId);
-      await fetchBookings();
-      alert('Escrow released successfully! Funds have been transferred to the freelancer.');
-
     } catch (error: any) {
       console.error('Error releasing escrow:', error);
       alert(`Failed to release escrow: ${error.message || 'Unknown error'}`);
@@ -344,76 +250,21 @@ export default function ClientProjects() {
     setProcessingEscrow(prev => ({ ...prev, [escrowId]: 'refunding' }));
 
     try {
-      // Check if Plug wallet is available
-      if (typeof window === 'undefined' || !(window as any).ic?.plug) {
-        throw new Error('Plug wallet not found. Please install Plug wallet extension.');
-      }
-
-      const plug = (window as any).ic.plug;
-      const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST || 'https://icp0.io';
-      const escrowCanisterId = process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID;
-
-      if (!escrowCanisterId) {
-        throw new Error('Escrow canister ID not configured');
-      }
-
-      // Ensure wallet is connected
-      const isConnected = await plug.isConnected();
-      if (!isConnected) {
-        const connected = await plug.requestConnect({
-          whitelist: [escrowCanisterId],
-          host: IC_HOST,
-        });
-        if (!connected) {
-          throw new Error('Wallet connection was cancelled or failed');
-        }
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Get agent from Plug
-      let agent = plug.agent || plug.createAgent?.() || plug.getAgent?.();
-      if (!agent) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        agent = plug.agent;
-      }
-
-      if (!agent) {
-        throw new Error('Failed to get wallet agent');
-      }
-
-      // Fetch root key for localhost
-      if (IC_HOST.includes('localhost') || IC_HOST.includes('127.0.0.1')) {
-        try {
-          await agent.fetchRootKey();
-        } catch (e) {
-          // Ignore
-        }
-      }
-
-      // Create escrow actor with Plug's agent
-      const { Actor } = await import('@dfinity/agent');
-      const { Principal } = await import('@dfinity/principal');
-      const { idlFactory: escrowIdlFactory } = await import('@/lib/declarations/escrow/escrow.did.js');
-
-      const canisterId = Principal.fromText(escrowCanisterId);
-      const escrowActor = Actor.createActor(escrowIdlFactory, {
-        agent,
-        canisterId,
+      // Same shape as release: the server decides eligibility and how much
+      // remains refundable, rather than the browser reading the escrow itself.
+      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'requested_by_customer' }),
       });
+      const body = await res.json();
 
-      // Call refund function directly
-      const result: any = await escrowActor.refund(escrowId);
-
-      if ('err' in result) {
-        throw new Error(result.err);
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Could not refund the payment');
       }
 
-      // Success - refresh status and bookings
+      alert('Payment refunded.');
       await fetchEscrowStatus(escrowId);
-      await fetchBookings();
-      alert('Escrow refunded successfully! Funds have been returned to your wallet.');
-
     } catch (error: any) {
       console.error('Error refunding escrow:', error);
       alert(`Failed to refund escrow: ${error.message || 'Unknown error'}`);

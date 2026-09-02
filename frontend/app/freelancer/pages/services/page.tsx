@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Package, Eye } from 'lucide-react';
-import { formatICP } from '@/lib/ic-marketplace-agent';
+import { formatMoney } from '@/lib/currency';
 
 export default function FreelancerServices() {
   const router = useRouter();
@@ -236,7 +236,7 @@ export default function FreelancerServices() {
                           </p>
                           <div className="flex items-center justify-between mt-3">
                             <div className="text-lg font-semibold text-[#0B1F36]">
-                              {formatICP(BigInt(pkg.price_e8s))}
+                              {formatMoney(pkg.price_minor)}
                             </div>
                             <div className="text-sm text-gray-500">
                               {pkg.delivery_days} days
@@ -438,7 +438,7 @@ function PackageForm({
   const [formData, setFormData] = useState({
     title: pkg?.title || '',
     description: pkg?.description || '',
-    price_e8s: pkg?.price_e8s ? Number(pkg.price_e8s) : 0,
+    price_minor: pkg?.price_minor ? Number(pkg.price_minor) : 0,
     delivery_days: pkg?.delivery_days || 7,
     tier: pkg?.tier || 'Basic',
     features: pkg?.features || [''],
@@ -512,10 +512,10 @@ function PackageForm({
               <input
                 type="number"
                 step="0.01"
-                value={formData.price_e8s / 100_000_000}
+                value={formData.price_minor / 100_000_000}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  price_e8s: Math.floor(parseFloat(e.target.value || '0') * 100_000_000) 
+                  price_minor: Math.floor(parseFloat(e.target.value || '0') * 100_000_000) 
                 })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 required

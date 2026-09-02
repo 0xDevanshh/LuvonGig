@@ -18,3 +18,8 @@ export async function DELETE(request: NextRequest, { params }: Ctx) {
   const { hackathonId } = await params;
   return proxy(request, `/api/hackathons/${hackathonId}`);
 }
+
+export async function PUT(request: NextRequest, { params }: Ctx) {
+  const { hackathonId } = await params;
+  return proxy(request, `/api/hackathons/${hackathonId}`);
+}

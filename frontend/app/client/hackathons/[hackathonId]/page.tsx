@@ -21,9 +21,38 @@ import {
   Zap,
   Globe
 } from 'lucide-react';
-import { HackathonCanister } from '@/lib/hackathon-canister';
-import { Hackathon } from '@/lib/hackathon-agent';
-import { getPrincipalFromEmail } from '@/lib/principal-utils';
+/**
+ * Shape of a hackathon as the API returns it.
+ *
+ * This used to come from lib/hackathon-agent (a Candid type) with
+ * lib/hackathon-canister imported alongside but never called. The page has
+ * fetched /api/hackquest/* for its data all along, so the canister imports
+ * were vestigial — and they broke the build when those files were removed.
+ *
+ * Variant fields that Candid encoded as `{ Upcoming: null }` are plain strings
+ * here, which is what the Postgres-backed API actually sends.
+ */
+interface Hackathon {
+  hackathon_id: string;
+  id?: string;
+  title: string;
+  tagline: string;
+  description: string;
+  theme: string;
+  mode?: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  registration_start: string;
+  registration_end: string;
+  min_team_size: number;
+  max_team_size: number;
+  prize_pool: string;
+  rules?: string;
+  status: string;
+  created_at: string;
+  updated_at?: string;
+}
 
 // Extended interface to include additional properties
 interface ExtendedHackathon extends Hackathon {
@@ -315,8 +344,8 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
     }
 
     try {
-      const organizerPrincipal = getPrincipalFromEmail(userEmail).toText();
-      const response = await fetch(`/api/hackquest/hackathon/${hackathonId}?organizer=${encodeURIComponent(organizerPrincipal)}`, {
+      const organizerPrincipal = userEmail;
+      const response = await fetch(`/api/hackquest/hackathon/${hackathonId}`, {
         method: 'DELETE',
       });
       
@@ -336,7 +365,9 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
 
   // Get status display text and color
   const getStatusInfo = (hackathon: Hackathon) => {
-    if (hackathon.status?.Cancelled !== undefined && hackathon.status?.Cancelled !== null) {
+    // The API sends a plain status string. Candid used to encode this as a
+    // single-key variant object, hence the old `status.Cancelled !== null` test.
+    if (hackathon.status?.toLowerCase() === 'cancelled') {
       return { text: 'Cancelled', color: 'bg-red-100 text-red-800', icon: AlertCircle };
     }
 
@@ -984,7 +1015,7 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
                     <Settings className="w-4 h-4 mr-2" />
                     Mode
                   </span>
-                  <span className="font-semibold">{Object.keys(hackathon.mode)[0]}</span>
+                  <span className="font-semibold">{hackathon.mode || 'Online'}</span>
                 </div>
                 {hackathon.registration_fee && hackathon.registration_fee > 0 && (
                   <div className="flex items-center justify-between">

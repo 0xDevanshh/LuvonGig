@@ -16,7 +16,7 @@ import {
   MoreHorizontal,
   Package
 } from 'lucide-react'
-import { formatICP } from '@/lib/ic-marketplace-agent'
+import { formatMoney } from '@/lib/currency';
 
 export default function MyServicesPage() {
   const router = useRouter()

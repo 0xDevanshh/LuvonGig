@@ -14,7 +14,7 @@ import { OrderSummary } from '@/components/payment/OrderSummary';
 import { PaymentProcessing } from '@/components/payment/PaymentProcessing';
 import { PaymentSuccess } from '@/components/payment/PaymentSuccess';
 import StripeCheckout from '@/components/payment/StripeCheckout';
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent';
+import { getJob } from '@/lib/api/jobs';
 import { getUserProfileByEmail } from '@/lib/user-profile';
 
 export default function ProposalCheckoutPage() {
@@ -49,32 +49,17 @@ export default function ProposalCheckoutPage() {
 
             try {
                 console.log('🔍 Fetching data for checkout:', { proposalId, jobId, userEmail: profile.email });
-                const actor = await getJobMarketplaceActor();
+                // One request carries the job and the proposals this caller
+                // may see; the API decides which those are.
+                const serializedJob = await getJob(jobId);
+                setJob(serializedJob);
 
-                // Fetch Job Details
-                const jobResult = await actor.getJobById(jobId);
-                if (jobResult && jobResult.length > 0) {
-                    const serializedJob = serializeBigInts(jobResult[0]);
-                    setJob(serializedJob);
-                    console.log('✅ Job found:', serializedJob.title);
-                } else {
-                    console.error('❌ Job not found in canister:', jobId);
-                }
-
-                // Get clientId correctly (same logic as JobApplicationsPage)
-                const userProfileData = await getUserProfileByEmail(profile.email);
-                const clientId = userProfileData.userId || profile.email;
-                console.log('👤 Resolved clientId:', clientId);
-
-                // Fetch Proposals to find the specific one
-                const propsResult = await actor.getProposalsByJob(jobId, clientId);
-                if ('ok' in propsResult) {
-                    console.log('📋 Total proposals for job:', propsResult.ok.length);
-                    const matchingProposal = propsResult.ok.find((p: any) => p.id === proposalId);
+                {
+                    const matchingProposal = (serializedJob.proposals ?? [])
+                        .find((p) => p.id === proposalId);
                     if (matchingProposal) {
-                        const serializedProposal = serializeBigInts(matchingProposal);
+                        const serializedProposal = matchingProposal;
                         setProposal(serializedProposal);
-                        console.log('✅ Matching proposal found:', serializedProposal.id);
 
                         // Fetch Freelancer's Plan Fee
                         try {
@@ -90,11 +75,8 @@ export default function ProposalCheckoutPage() {
                         }
 
                     } else {
-                        console.error('❌ Proposal not found in job proposals list:', proposalId);
-                        console.log('Available proposal IDs:', propsResult.ok.map((p: any) => p.id));
+                        console.error('Proposal not found on this job:', proposalId);
                     }
-                } else {
-                    console.error('❌ Error fetching proposals:', propsResult.err);
                 }
             } catch (error) {
                 console.error('❌ Error fetching data:', error);
@@ -110,7 +92,8 @@ export default function ProposalCheckoutPage() {
 
     const calculateSubtotal = (): number => {
         if (!proposal) return 0;
-        return Number(proposal.bidAmount) / 100000000;
+        // Minor units now, not e8s.
+        return Number(proposal.bid_minor) / 100;
     };
 
     const calculatePlatformFee = (): number => {

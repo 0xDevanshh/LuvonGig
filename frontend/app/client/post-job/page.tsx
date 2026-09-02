@@ -17,7 +17,8 @@ import {
   Save,
   AlertCircle
 } from 'lucide-react'
-import { getJobMarketplaceActor } from '@/lib/job-marketplace-agent'
+import { createJob } from '@/lib/api/jobs'
+import { toMinorUnits } from '@/lib/currency'
 import { useUserContext } from '@/contexts/UserContext'
 import { getUserProfileByEmail } from '@/lib/user-profile'
 
@@ -87,34 +88,30 @@ export default function PostJobPage() {
       const userProfileData = await getUserProfileByEmail(profile.email)
       const clientId = userProfileData.userId || profile.email
 
-      const actor = await getJobMarketplaceActor()
-
-      // Convert ICP to e8s BigInt, handling decimals
       const budgetFloat = parseFloat(formData.budget)
       if (isNaN(budgetFloat)) {
         throw new Error('Invalid budget amount')
       }
-      const budgetAmount = BigInt(Math.floor(budgetFloat * 100000000))
-      const budgetType = formData.budgetType === 'FIXED' ? { FIXED: null } : { HOURLY: null }
 
-      const result = await actor.createJob(
-        clientId,
-        formData.title,
-        formData.description,
-        formData.skills,
-        budgetType,
-        budgetAmount
-      )
+      // Minor units, not e8s. The poster is the session — `clientId` is no
+      // longer sent, because the API would ignore it: a caller-supplied user
+      // id is what let anyone post as anyone else.
+      await createJob({
+        title: formData.title,
+        description: formData.description,
+        required_skills: formData.skills,
+        budget_type: formData.budgetType === 'FIXED' ? 'fixed' : 'hourly',
+        budget_minor: toMinorUnits(budgetFloat),
+      })
 
-      if ('ok' in result) {
-        alert('Job posted successfully to ICP!')
-        router.push('/client/my-job-posts')
-      } else {
-        alert('Failed to post job: ' + result.err)
-      }
+      // createJob throws on failure, so reaching here means it worked. The
+      // canister returned a Result variant instead, hence the old
+      // `if ('ok' in result)` branch.
+      alert('Job posted successfully')
+      router.push('/client/my-job-posts')
     } catch (error) {
-      console.error('Error posting job to ICP:', error)
-      alert('Failed to post job. Please ensure the canister is deployed and the environment variables are set.')
+      console.error('Error posting job:', error)
+      alert(error instanceof Error ? error.message : 'Failed to post job. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

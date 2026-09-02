@@ -68,7 +68,6 @@ const nextConfig: NextConfig = {
         'bufferutil': false,
         'utf-8-validate': false,
       // Point WASM file to a stub module to prevent resolution errors
-      'forwarding_address_bg.wasm': require.resolve('./webpack-wasm-stub.js'),
       };
       
       // Add a custom resolver to catch WASM file requests

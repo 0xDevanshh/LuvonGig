@@ -1,144 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { HttpAgent, Actor } from '@dfinity/agent';
-import { Principal } from '@dfinity/principal';
 import { Loader2, Plus, Trash2, CheckCircle2, AlertTriangle, ArrowLeft, Save, Image, Upload, Users, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getPrincipalFromEmail } from '@/lib/principal-utils';
 
 const CANISTER_ID = process.env.NEXT_PUBLIC_HACKATHON_CANISTER_ID ?? '';
 const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST ?? '';
 
-const hackquestIdl = ({ IDL }: typeof import('@dfinity/candid')) => {
-  const HackathonStatus = IDL.Variant({
-    Draft: IDL.Null,
-    Upcoming: IDL.Null,
-    Ongoing: IDL.Null,
-    Judging: IDL.Null,
-    Completed: IDL.Null,
-    Cancelled: IDL.Null,
-  });
-
-  const CategoryInput = IDL.Record({
-    name: IDL.Text,
-    description: IDL.Text,
-    rewardSlots: IDL.Nat,
-    judgingCriteria: IDL.Vec(IDL.Text),
-  });
-
-  const RewardInput = IDL.Record({
-    title: IDL.Text,
-    description: IDL.Text,
-    amount: IDL.Nat64,
-    rank: IDL.Nat,
-    categoryName: IDL.Opt(IDL.Text),
-    perks: IDL.Vec(IDL.Text),
-  });
-
-  const Hackathon = IDL.Record({
-    id: IDL.Text,
-    organizer: IDL.Principal,
-    title: IDL.Text,
-    tagline: IDL.Text,
-    summary: IDL.Text,
-    bannerUrl: IDL.Text,
-    heroVideoUrl: IDL.Text,
-    location: IDL.Text,
-    theme: IDL.Text,
-    prizePool: IDL.Nat64,
-    faq: IDL.Vec(IDL.Text),
-    resources: IDL.Vec(IDL.Text),
-    minTeamSize: IDL.Nat,
-    maxTeamSize: IDL.Nat,
-    maxTeamsPerCategory: IDL.Nat,
-    submissionsOpenAt: IDL.Int,
-    submissionsCloseAt: IDL.Int,
-    startAt: IDL.Int,
-    endAt: IDL.Int,
-    createdAt: IDL.Int,
-    status: HackathonStatus,
-    categories: IDL.Vec(IDL.Text),
-    rewards: IDL.Vec(IDL.Text),
-  });
-
-  const HackQuestError = IDL.Variant({
-    NotFound: IDL.Text,
-    ValidationError: IDL.Text,
-    InvalidState: IDL.Text,
-    NotAuthorized: IDL.Null,
-  });
-
-  const CreateHackathonRequest = IDL.Record({
-    title: IDL.Text,
-    tagline: IDL.Text,
-    summary: IDL.Text,
-    bannerUrl: IDL.Text,
-    heroVideoUrl: IDL.Text,
-    location: IDL.Text,
-    theme: IDL.Text,
-    prizePool: IDL.Nat64,
-    faq: IDL.Vec(IDL.Text),
-    resources: IDL.Vec(IDL.Text),
-    minTeamSize: IDL.Nat,
-    maxTeamSize: IDL.Nat,
-    maxTeamsPerCategory: IDL.Nat,
-    submissionsOpenAt: IDL.Int,
-    submissionsCloseAt: IDL.Int,
-    startAt: IDL.Int,
-    endAt: IDL.Int,
-    categories: IDL.Vec(CategoryInput),
-    rewards: IDL.Vec(RewardInput),
-  });
-
-  return IDL.Service({
-    createHackathon: IDL.Func(
-      [CreateHackathonRequest, IDL.Principal],
-      [IDL.Variant({ ok: Hackathon, err: HackQuestError })],
-      []
-    ),
-    updateHackathon: IDL.Func(
-      [IDL.Text, CreateHackathonRequest, IDL.Principal],
-      [IDL.Variant({ ok: Hackathon, err: HackQuestError })],
-      []
-    ),
-    getHackathonDetails: IDL.Func(
-      [IDL.Text],
-      [IDL.Opt(IDL.Record({
-        hackathon: Hackathon,
-        categories: IDL.Vec(IDL.Record({
-          id: IDL.Text,
-          hackathonId: IDL.Text,
-          name: IDL.Text,
-          description: IDL.Text,
-          rewardSlots: IDL.Nat,
-          judgingCriteria: IDL.Vec(IDL.Text),
-        })),
-        rewards: IDL.Vec(IDL.Record({
-          id: IDL.Text,
-          hackathonId: IDL.Text,
-          title: IDL.Text,
-          description: IDL.Text,
-          amount: IDL.Nat64,
-          rank: IDL.Nat,
-          categoryId: IDL.Opt(IDL.Text),
-          perks: IDL.Vec(IDL.Text),
-          // Other fields omitted for simplicity in form hydration
-        })),
-      }))],
-      ['query']
-    ),
-  });
-};
-
-const createHackquestActor = async () => {
-  if (!CANISTER_ID) throw new Error('Canister ID not configured');
-  const agent = new HttpAgent({ host: IC_HOST });
-  if (IC_HOST.includes('127.0.0.1') || IC_HOST.includes('localhost')) {
-    await agent.fetchRootKey();
-  }
-  return Actor.createActor(hackquestIdl as any, { agent, canisterId: CANISTER_ID });
-};
 
 const emptyCategory = { name: '', description: '', rewardSlots: 1, judgingCriteria: [''] };
 const emptyReward = { title: '', description: '', amount: '', rank: 1, categoryName: '', perks: [''] };
@@ -262,18 +130,16 @@ export const HackathonForm: React.FC<HackathonFormProps> = ({ initialHackathonId
   const fetchHackathonForEdit = useCallback(async (id: string) => {
     try {
       setIsLoading(true);
-      const actor: any = await createHackquestActor();
-      const result = await actor.getHackathonDetails(id);
-      
-      if (result && result[0]) {
-        const details = result[0];
-        hydrateForm({
-          ...details.hackathon,
-          categories: details.categories,
-          rewards: details.rewards
-        });
+      // The detail endpoint returns the hackathon with its categories and
+      // rewards already attached; Candid returned an optional wrapped in a
+      // one-or-zero element array, hence the old `result[0]`.
+      const res = await fetch(`/api/hackquest/hackathon/${encodeURIComponent(id)}`);
+      const body = await res.json();
+
+      if (res.ok && body.success && body.data) {
+        hydrateForm(body.data);
       } else {
-        setStatusMessage({ type: 'error', text: 'Hackathon not found.' });
+        setStatusMessage({ type: 'error', text: body.error || 'Hackathon not found.' });
       }
     } catch (error) {
       console.error('Failed to fetch hackathon for edit', error);
@@ -292,7 +158,7 @@ export const HackathonForm: React.FC<HackathonFormProps> = ({ initialHackathonId
           if (data.success && data.session?.email) {
             setUserEmail(data.session.email);
             try {
-              const principal = getPrincipalFromEmail(data.session.email);
+              const principal = data.session.email;
               setUserPrincipal(principal.toText());
             } catch (err) {
               console.error('Failed to generate principal:', err);
@@ -431,21 +297,27 @@ export const HackathonForm: React.FC<HackathonFormProps> = ({ initialHackathonId
         })),
       };
 
-      const actor: any = await createHackquestActor();
-      const organizerPrincipal = Principal.fromText(userPrincipal);
-      
-      let result;
-      if (editId) {
-        result = await actor.updateHackathon(editId, payload, organizerPrincipal);
-      } else {
-        result = await actor.createHackathon(payload, organizerPrincipal);
-      }
+      // The organiser is the session; the canister took a Principal argument
+      // and trusted it.
+      const res = editId
+        ? await fetch(`/api/hackquest/hackathon/${encodeURIComponent(editId)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+        : await fetch('/api/hackathons', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
 
-      if ('ok' in result) {
+      const body = await res.json();
+
+      if (res.ok && body.success) {
         setStatusMessage({ type: 'success', text: editId ? 'Hackathon updated!' : 'Hackathon created!' });
         if (!editId) router.push('/client/hackathons');
       } else {
-        throw new Error(Object.values(result.err)[0] as string);
+        throw new Error(body.error || 'Failed to save hackathon');
       }
     } catch (error) {
       console.error('Failed to save hackathon', error);

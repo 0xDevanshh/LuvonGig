@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react';
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent';
+import { listJobs } from '@/lib/api/jobs';
 
 // Types
 export interface Service {
@@ -27,7 +27,7 @@ export interface Package {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: string;
   delivery_days: number;
   features: string[];
   revisions_included: number;
@@ -45,9 +45,9 @@ export interface Booking {
   package_id: string;
   service_id?: string;
   status: string;
-  total_amount_e8s: number;
+  total_minor: string;
   total_amount_dollars?: number;
-  escrow_amount_e8s: number;
+  amount_minor: string;
   escrow_amount_dollars?: number;
   payment_status: string;
   client_notes?: string;
@@ -81,7 +81,7 @@ export interface Stage {
   stage_number: number;
   title: string;
   description: string;
-  amount_e8s: number;
+  amount_minor: string;
   status: 'Pending' | 'InProgress' | 'Submitted' | 'Approved' | 'Rejected' | 'Released';
   created_at: number;
   updated_at: number;
@@ -441,11 +441,21 @@ export function useProjectCompletion() {
     setError(null);
 
     try {
-      const response = await fetch('/api/marketplace/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, bookingId, action: 'complete' }),
-      });
+      // /api/marketplace/projects took { userId, bookingId, action } and
+      // trusted the caller-supplied userId. Completion now goes through the
+      // resource's own endpoint, which reads the actor from the session and
+      // enforces the state machine.
+      const isJob = bookingId.startsWith('job_');
+      const response = isJob
+        ? await fetch(`/api/marketplace/job-posts/${encodeURIComponent(bookingId.replace('job_', ''))}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          })
+        : await fetch(`/api/marketplace/bookings/${encodeURIComponent(bookingId)}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'completed' }),
+          });
 
       const data = await response.json();
       return data.success ? { success: true, data: data.data } : { success: false, error: data.error };
@@ -505,13 +515,12 @@ export function useJobProjects(userId: string, role: 'client' | 'freelancer') {
     setError(null);
 
     try {
-      const actor = await getJobMarketplaceActor();
-      const result = await actor.getAssignedJobs(userId, role);
-      console.log(`📥 useJobProjects: Received ${result.length} projects for ${userId}`);
-      if (result.length > 0) {
-        console.log('📄 First project example:', serializeBigInts(result[0]));
-      }
-      setProjects(serializeBigInts(result));
+      // getAssignedJobs(userId, role) becomes a filtered list: a freelancer's
+      // assigned work, or a client's own postings.
+      const { jobs } = await listJobs(
+        role === 'freelancer' ? { freelancerId: userId } : { clientId: userId },
+      );
+      setProjects(jobs);
     } catch (err: any) {
       console.error('❌ useJobProjects: Error fetching job projects:', err);
       setError(err.message || 'Failed to fetch job projects');

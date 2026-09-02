@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { formatBookingDate, formatBookingDateShort, formatRelativeTime, isOverdue, getTimeRemaining } from '@/lib/date-utils';
 import { useBookings, useStages, useJobProjects } from '@/hooks/useMarketplace';
-import { getJobMarketplaceActor, serializeBigInts } from '@/lib/job-marketplace-agent';
+import { getJob } from '@/lib/api/jobs';
 import { ReviewModal } from '@/components/ReviewModal';
 
 export default function ProjectDetailPage() {
@@ -102,13 +102,11 @@ export default function ProjectDetailPage() {
         const jobId = bookingId.replace('job_', '');
         console.log('🔍 Fetching Job Marketplace project:', jobId);
 
-        const actor = await getJobMarketplaceActor();
-        const jobResult = await actor.getJobById(jobId);
+        // The API returns the job directly; Candid wrapped an optional as a
+        // one-or-zero element array, hence the old length check.
+        const serializedJob = await getJob(jobId);
 
-        if (jobResult && jobResult.length > 0) {
-          const serializedJob = serializeBigInts(jobResult[0]);
-          console.log(`🔍 [LOG] Raw job status from canister:`, serializedJob.status);
-          console.log(`🔍 [LOG] Job isPaid flag:`, serializedJob.isPaid);
+        if (serializedJob) {
 
           // Normalize job to look like a booking for the UI
           projectData = {
@@ -118,8 +116,8 @@ export default function ProjectDetailPage() {
             service_title: serializedJob.title,
             freelancer_email: serializedJob.freelancerId,
             freelancer_id: serializedJob.freelancerId,
-            total_amount_e8s: serializedJob.budgetAmount,
-            base_amount_e8s: serializedJob.budgetAmount,
+            total_minor: serializedJob.budget_minor,
+            base_amount_minor: serializedJob.budget_minor,
             status: serializedJob.status,
             payment_status: (getStatusString(serializedJob.status) === 'PAID' || serializedJob.isPaid)
               ? 'Paid'
@@ -419,318 +417,32 @@ export default function ProjectDetailPage() {
       return;
     }
 
-    // Check if Plug wallet is available
-    if (typeof window === 'undefined' || !(window as any).ic?.plug) {
-      alert('Plug wallet not found. Please install and connect Plug wallet to release funds.');
-      return;
-    }
+    setLoading(true);
 
-    const plug = (window as any).ic.plug;
-
-    // Check if wallet is connected
     try {
-      const isConnected = await plug.isConnected();
-      if (!isConnected) {
-        const connected = await plug.requestConnect({
-          whitelist: [process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID || ''],
-          host: process.env.NEXT_PUBLIC_IC_HOST || 'https://ic0.app',
-        });
-        if (!connected) {
-          alert('Please connect your Plug wallet to release funds.');
-          return;
-        }
+      // One authenticated request. This previously connected Plug, built an
+      // escrow actor from a Candid IDL, read the escrow and treasury, then
+      // called escrow.release() — over a hundred lines of wallet plumbing in
+      // the browser. Eligibility is decided server-side now.
+      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const body = await res.json();
+
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Could not release the payment');
       }
+
+      alert('Payment released to the freelancer.');
+      await fetchProjectDetails();
     } catch (error) {
-      alert('Failed to connect Plug wallet. Please try again.');
-      return;
-    }
-
-    setReleasing(true);
-    let success = false;
-    let lastError = 'Unknown error';
-    let foundEscrowId = escrowId;
-
-    try {
-      // First, get the escrow actor using Plug wallet
-      const { Actor, HttpAgent } = await import('@dfinity/agent');
-      const { Principal } = await import('@dfinity/principal');
-
-      // Import IDL factory directly - ensure we get the latest version
-      const escrowDidModule = await import('@/lib/declarations/escrow/escrow.did.js');
-      const escrowIdlFactory = escrowDidModule.idlFactory;
-
-      // Verify IDL factory exists and has the release method
-      if (!escrowIdlFactory) {
-        throw new Error('Failed to load escrow IDL factory');
-      }
-      console.log('✅ Escrow IDL factory loaded:', typeof escrowIdlFactory);
-
-      // Get agent from Plug (has user's identity)
-      // Increased wait time to ensure agent is fully ready
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for agent to be ready
-      let agent = plug.agent;
-      if (!agent) {
-        agent = plug.createAgent?.() || plug.getAgent?.();
-      }
-
-      if (!agent) {
-        // Create agent manually with Plug's identity
-        const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST || 'https://ic0.app';
-        agent = new HttpAgent({
-          host: IC_HOST,
-          identity: plug.sessionManager?.identity || plug.identity,
-        });
-
-        if (IC_HOST.includes('localhost') || IC_HOST.includes('127.0.0.1')) {
-          await agent.fetchRootKey();
-        }
-      }
-
-      // Ensure agent is ready by verifying it has an identity
-      if (!agent || !agent.getPrincipal) {
-        throw new Error('Agent is not properly initialized. Please reconnect your Plug wallet.');
-      }
-
-      // Verify agent identity is available
-      try {
-        const principal = await agent.getPrincipal();
-        console.log('✅ Agent ready with principal:', principal.toString());
-      } catch (identityError) {
-        console.warn('⚠️ Could not verify agent identity, but continuing:', identityError);
-      }
-
-      const canisterId = Principal.fromText(process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID || '');
-      console.log('🔧 Creating actor with canister ID:', canisterId.toString());
-      console.log('🔧 IDL factory type:', typeof escrowIdlFactory);
-
-      // Verify IDL factory structure
-      if (typeof escrowIdlFactory !== 'function') {
-        throw new Error(`Invalid IDL factory: expected function, got ${typeof escrowIdlFactory}`);
-      }
-
-      // Create actor with explicit IDL factory
-      const escrowActor = Actor.createActor(escrowIdlFactory, {
-        agent,
-        canisterId,
-      });
-
-      // Verify the actor has the release method
-      if (!escrowActor || typeof escrowActor.release !== 'function') {
-        const actorKeys = escrowActor ? Object.keys(escrowActor) : [];
-        throw new Error(`Escrow actor does not have release method. Available methods: ${actorKeys.join(', ')}`);
-      }
-      console.log('✅ Escrow actor created, release method available:', typeof escrowActor.release);
-
-      // First, test with a query function to verify canister is accessible and IDL matches
-      try {
-        console.log('🔍 Testing canister connection with get_treasury query...');
-        const treasuryTest: any = await escrowActor.get_treasury();
-        console.log('✅ Canister query successful, treasury:', treasuryTest.toString());
-      } catch (testError: any) {
-        console.error('❌ Canister query test failed:', testError);
-        throw new Error(`Cannot connect to escrow canister. This might indicate the canister needs to be redeployed or there's a network issue. Error: ${testError.message}`);
-      }
-
-      // Try to find the escrow - try different counter values if needed
-      console.log('🔍 Attempting to release escrow:', escrowId);
-
-      let escrow: any = null;
-      let escrowFound = false;
-
-      try {
-        escrow = await escrowActor.get(escrowId);
-        escrowFound = true;
-        foundEscrowId = escrowId;
-        console.log('✅ Escrow found with ID:', escrowId);
-      } catch (getError: any) {
-        // Try different counter values
-        if (escrowId.includes(':')) {
-          const parts = escrowId.split(':');
-          const projectId = parts.slice(0, -1).join(':');
-
-          for (let i = 0; i <= 20; i++) {
-            const tryEscrowId = `${projectId}:${i}`;
-            try {
-              escrow = await escrowActor.get(tryEscrowId);
-              foundEscrowId = tryEscrowId;
-              escrowFound = true;
-              console.log(`✅ Found escrow with ID: ${tryEscrowId}`);
-              break;
-            } catch (e) {
-              // Not found, continue
-            }
-          }
-        }
-      }
-
-      if (!escrowFound || !escrow) {
-        throw new Error(`Escrow not found: ${escrowId}`);
-      }
-
-      // IMPORTANT: Refresh funding status first to update from #created to #funded
-      // This checks the ledger balance and updates status if funds are available
-      console.log('🔄 Refreshing escrow funding status...');
-      const refreshResult: any = await escrowActor.refresh_funding(foundEscrowId);
-      const balance = Number(refreshResult.balanceE8s);
-      const isFunded = refreshResult.funded;
-      const expectedE8s = Number(escrow.expectedE8s || 0);
-
-      console.log('📊 Refresh result:', {
-        funded: isFunded,
-        balanceE8s: balance,
-        balanceICP: balance / 100000000,
-        expectedE8s: expectedE8s,
-        expectedICP: expectedE8s / 100000000
-      });
-
-      if (!isFunded && !(escrow.status && 'released' in escrow.status)) {
-        if (balance === 0) {
-          throw new Error(`No funds found in escrow. Balance: 0 ICP. Please deposit funds to the escrow account first.`);
-        } else {
-          throw new Error(`Escrow is not fully funded. Current balance: ${balance / 100000000} ICP, Expected: ${expectedE8s / 100000000} ICP`);
-        }
-      }
-
-      // Check if ALREADY released - if so, we just want to ensure frontend/job canister sync
-      if (escrow.status && 'released' in escrow.status) {
-        console.log('ℹ️ Escrow is already released. Proceeding to sync status...');
-        await markAsCompletedAndPaidAfterRelease();
-        setReleasing(false);
-        return;
-      }
-
-      // Get updated escrow to verify status
-      escrow = await escrowActor.get(foundEscrowId);
-      console.log('✅ Escrow status updated. Current status:',
-        escrow.status && 'funded' in escrow.status ? 'FUNDED' :
-          escrow.status && 'created' in escrow.status ? 'CREATED' : 'OTHER');
-
-      // Get service price (base amount) from project data
-      let servicePriceE8s: bigint;
-      if (project?.base_amount_e8s) {
-        servicePriceE8s = BigInt(project.base_amount_e8s);
-        console.log('✅ Using service price from project data:', Number(servicePriceE8s) / 100000000, 'ICP');
-      } else {
-        // Calculate from expected amount: servicePrice = (expectedE8s - networkFee) / (1 + platformFee)
-        const NETWORK_TRANSFER_FEE_E8S = BigInt(30000); // 0.0003 ICP
-        const expectedE8s = BigInt((escrow as any).expectedE8s || 0);
-
-        // Use the plan from the escrow record if available
-        const isPremium = escrow.plan && 'premium' in escrow.plan;
-        const feeMultiplier = isPremium ? BigInt(103) : BigInt(104);
-
-        if (expectedE8s > NETWORK_TRANSFER_FEE_E8S) {
-          const amountAfterNetworkFee = expectedE8s - NETWORK_TRANSFER_FEE_E8S;
-          servicePriceE8s = (amountAfterNetworkFee * BigInt(100)) / feeMultiplier;
-          console.log('📊 Calculated service price from expected amount:', Number(servicePriceE8s) / 100000000, 'ICP');
-        } else {
-          throw new Error('Invalid escrow amount: cannot calculate service price');
-        }
-      }
-
-      // Call release directly with Plug wallet (authenticated call)
-      // Update calls can take 30-90 seconds, so we add a timeout wrapper
-      console.log('🚀 Releasing escrow with Plug wallet:', foundEscrowId, 'with service price:', Number(servicePriceE8s) / 100000000, 'ICP');
-      console.log('🔍 Escrow actor type:', typeof escrowActor);
-      console.log('🔍 Release function type:', typeof escrowActor.release);
-
-      let releaseResult: any;
-      try {
-        // Add timeout wrapper for the release call (update calls can take 30-90 seconds)
-        const releasePromise = escrowActor.release(foundEscrowId, servicePriceE8s);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Release call timed out after 120 seconds. The canister may be processing the request. Please check the escrow status and try again if needed.')), 120000)
-        );
-
-        releaseResult = await Promise.race([releasePromise, timeoutPromise]);
-        console.log('✅ Release result received:', releaseResult);
-        console.log('✅ Release result type:', typeof releaseResult);
-        console.log('✅ Release result keys:', Object.keys(releaseResult || {}));
-      } catch (callError: any) {
-        console.error('❌ Error calling release:', callError);
-        console.error('❌ Error details:', {
-          message: callError.message,
-          stack: callError.stack,
-          name: callError.name,
-          cause: callError.cause
-        });
-
-        // Check for timeout or read state errors
-        if (callError.message?.includes('Invalid read state') ||
-          callError.message?.includes('response could not be found') ||
-          callError.message?.includes('timed out')) {
-          const errorMsg = `The release call timed out or the response was not found. This can happen if:\n\n` +
-            `1. The network is slow or unstable\n` +
-            `2. The canister is processing other requests\n` +
-            `3. The agent connection was interrupted\n\n` +
-            `Please try again. If the issue persists, check:\n` +
-            `- Your internet connection\n` +
-            `- The escrow canister status\n` +
-            `- Try refreshing the page and reconnecting your wallet\n\n` +
-            `Escrow ID: ${foundEscrowId}\n` +
-            `Original error: ${callError.message}`;
-          throw new Error(errorMsg);
-        }
-
-        // Check if it's an IDL parsing error
-        if (callError.message?.includes('IDL error') || callError.message?.includes('parsing') || callError.message?.includes('unexpected IDL type')) {
-          const errorMsg = `IDL Mismatch Error: The deployed escrow canister (${process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID}) has a different interface than expected.\n\n` +
-            `Expected: release(escrowId, servicePriceE8s) returns TransferResult { ok: Nat } | { err: Text }\n` +
-            `Actual: The deployed canister appears to return a different type.\n\n` +
-            `Solution: Rebuild and redeploy the escrow canister with:\n` +
-            `  cd backend && dfx deploy escrow --network ic\n\n` +
-            `Original error: ${callError.message}`;
-          throw new Error(errorMsg);
-        }
-        throw callError;
-      }
-
-      // Handle the result - check for both possible formats
-      if (!releaseResult) {
-        throw new Error('Release function returned undefined or null');
-      }
-
-      if (typeof releaseResult === 'object') {
-        if ('err' in releaseResult) {
-          throw new Error(String(releaseResult.err));
-        }
-        if ('ok' in releaseResult) {
-          console.log('✅ Release successful, block index:', releaseResult.ok);
-        } else {
-          console.warn('⚠️ Unexpected result format:', releaseResult);
-          // Try to proceed anyway if it seems like a success
-          if (typeof releaseResult === 'bigint' || typeof releaseResult === 'number') {
-            console.log('✅ Assuming success - got block index:', releaseResult);
-          } else {
-            throw new Error(`Unexpected release result format: ${JSON.stringify(releaseResult)}`);
-          }
-        }
-      } else {
-        throw new Error(`Release function returned unexpected type: ${typeof releaseResult}, value: ${releaseResult}`);
-      }
-
-      // Mark project as completed and update payment status
-      await markAsCompletedAndPaidAfterRelease();
-
-      success = true;
-
-      // Show success message and review modal
-      console.log('✅ Funds released successfully! Project marked as completed.');
-      setShowReviewModal(true);
-    } catch (error: any) {
-      console.error('❌ Error releasing escrow:', error);
-      lastError = error.message || 'Unknown error';
-
-      // Handle specific errors
-      if (error.message?.includes('Unauthorized') || error.message?.includes('unauthorized')) {
-        alert(`Failed to release funds: ${lastError}\n\nMake sure you are using the correct wallet that created the escrow.\nEscrow ID: ${foundEscrowId}`);
-      } else {
-        alert(`Failed to release funds: ${lastError}\n\nEscrow ID used: ${foundEscrowId}\n\nPlease check the escrow ID or contact support.`);
-      }
+      console.error('Error releasing funds:', error);
+      alert(error instanceof Error ? error.message : 'Failed to release funds. Please try again.');
     } finally {
-      setReleasing(false);
+      setLoading(false);
     }
-  };
+  };;
 
   // Handle refund funds - call escrow canister directly using Plug wallet
   const handleRefundFunds = async () => {
@@ -771,189 +483,32 @@ export default function ProjectDetailPage() {
     }
 
     setRefunding(true);
-    let success = false;
-    let lastError = 'Unknown error';
-    let foundEscrowId = escrowId;
 
     try {
-      // Get the escrow actor using Plug wallet
-      const { Actor, HttpAgent } = await import('@dfinity/agent');
-      const { Principal } = await import('@dfinity/principal');
-      const { idlFactory: escrowIdlFactory } = await import('@/lib/declarations/escrow/escrow.did.js');
-
-      // Get agent from Plug (has user's identity)
-      // Increased wait time to ensure agent is fully ready
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait for agent to be ready
-      let agent = plug.agent;
-      if (!agent) {
-        agent = plug.createAgent?.() || plug.getAgent?.();
-      }
-
-      if (!agent) {
-        // Create agent manually with Plug's identity
-        const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST || 'https://ic0.app';
-        agent = new HttpAgent({
-          host: IC_HOST,
-          identity: plug.sessionManager?.identity || plug.identity,
-        });
-
-        if (IC_HOST.includes('localhost') || IC_HOST.includes('127.0.0.1')) {
-          await agent.fetchRootKey();
-        }
-      }
-
-      // Ensure agent is ready by verifying it has an identity
-      if (!agent || !agent.getPrincipal) {
-        throw new Error('Agent is not properly initialized. Please reconnect your Plug wallet.');
-      }
-
-      // Verify agent identity is available
-      try {
-        const principal = await agent.getPrincipal();
-        console.log('✅ Agent ready with principal:', principal.toString());
-      } catch (identityError) {
-        console.warn('⚠️ Could not verify agent identity, but continuing:', identityError);
-      }
-
-      const canisterId = Principal.fromText(process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID || '');
-      const escrowActor = Actor.createActor(escrowIdlFactory, {
-        agent,
-        canisterId,
+      // Same as release: one authenticated request. The browser no longer
+      // connects a wallet, builds an escrow actor, or hunts for the escrow id
+      // across candidate values — the server knows which payment this is and
+      // how much of it remains refundable.
+      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'requested_by_customer' }),
       });
+      const body = await res.json();
 
-      // Try to find the escrow - try different counter values if needed
-      console.log('🔍 Attempting to refund escrow:', escrowId);
-
-      let escrow: any = null;
-      let escrowFound = false;
-
-      try {
-        escrow = await escrowActor.get(escrowId);
-        escrowFound = true;
-        foundEscrowId = escrowId;
-        console.log('✅ Escrow found with ID:', escrowId);
-      } catch (getError: any) {
-        // Try different counter values
-        if (escrowId.includes(':')) {
-          const parts = escrowId.split(':');
-          const projectId = parts.slice(0, -1).join(':');
-
-          for (let i = 0; i <= 20; i++) {
-            const tryEscrowId = `${projectId}:${i}`;
-            try {
-              escrow = await escrowActor.get(tryEscrowId);
-              foundEscrowId = tryEscrowId;
-              escrowFound = true;
-              console.log(`✅ Found escrow with ID: ${tryEscrowId}`);
-              break;
-            } catch (e) {
-              // Not found, continue
-            }
-          }
-        }
+      if (!res.ok || !body.success) {
+        throw new Error(body.error || 'Could not refund the payment');
       }
 
-      if (!escrowFound || !escrow) {
-        throw new Error(`Escrow not found: ${escrowId}`);
-      }
-
-      // Check escrow status - cannot refund if already released
-      if (escrow.status && 'released' in escrow.status) {
-        throw new Error('Cannot refund a released escrow');
-      }
-
-      // Refresh funding to get current balance
-      console.log('🔄 Refreshing escrow funding status before refund...');
-      const refreshResult: any = await escrowActor.refresh_funding(foundEscrowId);
-      const balance = Number(refreshResult.balanceE8s);
-
-      console.log('📊 Refresh result:', {
-        funded: refreshResult.funded,
-        balanceE8s: balance,
-        balanceICP: balance / 100000000
-      });
-
-      if (balance === 0) {
-        throw new Error('No funds available to refund. Balance: 0 ICP');
-      }
-
-      // Call refund directly with Plug wallet (authenticated call)
-      // Update calls can take 30-90 seconds, so we add a timeout wrapper
-      console.log('🔄 Refunding escrow with Plug wallet:', foundEscrowId);
-
-      let refundResult: any;
-      try {
-        // Add timeout wrapper for the refund call (update calls can take 30-90 seconds)
-        const refundPromise = escrowActor.refund(foundEscrowId);
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Refund call timed out after 120 seconds. The canister may be processing the request. Please check the escrow status and try again if needed.')), 120000)
-        );
-
-        refundResult = await Promise.race([refundPromise, timeoutPromise]);
-      } catch (callError: any) {
-        console.error('❌ Error calling refund:', callError);
-        console.error('❌ Error details:', {
-          message: callError.message,
-          stack: callError.stack,
-          name: callError.name,
-          cause: callError.cause
-        });
-
-        // Check for timeout or read state errors
-        if (callError.message?.includes('Invalid read state') ||
-          callError.message?.includes('response could not be found') ||
-          callError.message?.includes('timed out')) {
-          const errorMsg = `The refund call timed out or the response was not found. This can happen if:\n\n` +
-            `1. The network is slow or unstable\n` +
-            `2. The canister is processing other requests\n` +
-            `3. The agent connection was interrupted\n\n` +
-            `Please try again. If the issue persists, check:\n` +
-            `- Your internet connection\n` +
-            `- The escrow canister status\n` +
-            `- Try refreshing the page and reconnecting your wallet\n\n` +
-            `Escrow ID: ${foundEscrowId}\n` +
-            `Original error: ${callError.message}`;
-          throw new Error(errorMsg);
-        }
-
-        // Check if it's an IDL parsing error
-        if (callError.message?.includes('IDL error') || callError.message?.includes('parsing') || callError.message?.includes('unexpected IDL type')) {
-          const errorMsg = `IDL Mismatch Error: The deployed escrow canister (${process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID}) has a different interface than expected.\n\n` +
-            `Expected: refund(escrowId) returns TransferResult { ok: Nat } | { err: Text }\n` +
-            `Actual: The deployed canister appears to return a different type.\n\n` +
-            `Solution: Rebuild and redeploy the escrow canister with:\n` +
-            `  cd backend && dfx deploy escrow --network ic\n\n` +
-            `Original error: ${callError.message}`;
-          throw new Error(errorMsg);
-        }
-        throw callError;
-      }
-
-      if (!refundResult) {
-        throw new Error('Refund function returned undefined or null');
-      }
-
-      if ('err' in refundResult) {
-        throw new Error(String(refundResult.err));
-      }
-
-      success = true;
-      alert(`Funds refunded successfully! Block index: ${refundResult.ok}`);
-      fetchProjectDetails();
-    } catch (error: any) {
-      console.error('❌ Error refunding escrow:', error);
-      lastError = error.message || 'Unknown error';
-
-      // Handle specific errors
-      if (error.message?.includes('Unauthorized') || error.message?.includes('unauthorized')) {
-        alert(`Failed to refund funds: ${lastError}\n\nMake sure you are using the correct wallet that created the escrow.\nEscrow ID: ${foundEscrowId}`);
-      } else {
-        alert(`Failed to refund funds: ${lastError}\n\nEscrow ID used: ${foundEscrowId}\n\nPlease check the escrow ID or contact support.`);
-      }
+      alert('Payment refunded.');
+      await fetchProjectDetails();
+    } catch (error) {
+      console.error('Error refunding:', error);
+      alert(error instanceof Error ? error.message : 'Failed to refund. Please try again.');
     } finally {
       setRefunding(false);
     }
-  };
+  };;
 
   // Handle mark as complete
   const handleMarkAsComplete = async () => {
