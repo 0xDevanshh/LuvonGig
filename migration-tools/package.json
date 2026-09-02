@@ -17,7 +17,8 @@
     "reconcile": "tsx src/import/reconcile.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export:sidestore": "tsx src/export/sideStore.ts"
+    "export:sidestore": "tsx src/export/sideStore.ts",
+    "export:escrow": "tsx src/export/escrow.ts"
   },
   "dependencies": {
     "@dfinity/agent": "^0.20.0",

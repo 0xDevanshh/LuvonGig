@@ -20,15 +20,27 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+/** The live payment for a booking, as /api/payments/for-booking returns it. */
+interface BookingPayment {
+  id: string;
+  state: string;
+  currency: string;
+  amount_minor: string;
+}
+
+/** 'held' is the escrow state: captured, and still on the platform balance. */
+const isHeld = (payment: BookingPayment | null | undefined) => payment?.state === 'held';
+
 export default function ClientProjects() {
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [userId, setUserId] = useState<string>(''); // For service bookings (email)
   const [jobUserId, setJobUserId] = useState<string>(''); // For job marketplace (8-char ID)
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [escrowStatuses, setEscrowStatuses] = useState<Record<string, { funded: boolean; balanceE8s: number; status: string }>>({});
-  const [escrowIds, setEscrowIds] = useState<Record<string, string>>({}); // Map booking_id to escrowId
-  const [processingEscrow, setProcessingEscrow] = useState<Record<string, 'releasing' | 'refunding'>>({});
+  // Keyed by booking id. A key present with a null value means "looked up, and
+  // this booking has no live payment" — distinct from "not looked up yet".
+  const [payments, setPayments] = useState<Record<string, BookingPayment | null>>({});
+  const [processingPayment, setProcessingPayment] = useState<Record<string, 'releasing' | 'refunding'>>({});
 
   const {
     bookings,
@@ -54,7 +66,11 @@ export default function ClientProjects() {
       title: b.service_title || 'Service Project',
       type: 'service',
       displayStatus: getStatusString(b.status),
-      amount: Number(b.total_minor) / 100000000,
+      // Integer minor units and a currency, formatted at render. The e8s
+      // division that used to be here dated from ICP and made a $100 booking
+      // read as 0.0001.
+      amountMinor: b.total_minor,
+      currency: b.currency || 'USD',
       createdAt: Number(b.created_at),
       freelancer: b.freelancer_email || b.freelancer_id
     }));
@@ -76,7 +92,10 @@ export default function ClientProjects() {
         title: j.title || 'Job Project',
         type: 'job',
         displayStatus: getStatusString(j.status),
-        amount: Number(j.budgetAmount) / 100000000,
+        // toJobDto sends budget_minor; `budgetAmount` never existed on it and
+        // rendered every job card as "NaN ICP".
+        amountMinor: j.budget_minor,
+        currency: j.currency || 'USD',
         createdAt: Number(j.createdAt),
         freelancer: j.freelancerId,
         payment_status: getStatusString(j.status) === 'CompletedAndPaid' ? 'Paid' : 'HeldInEscrow',
@@ -124,99 +143,46 @@ export default function ClientProjects() {
   }, [fetchBookings, fetchJobs, userId, jobUserId, statusFilter]);
 
 
-  // Get escrow ID from booking - try multiple formats since escrow ID is projectId:number
-  // Also try to find escrows even if there's no booking (for escrows created before booking creation was added)
-  const getEscrowId = async (booking: any, userPrincipal?: string): Promise<string | null> => {
-    const projectId = booking.service_id || booking.booking_id;
-    if (!projectId) {
-
-      return null;
-    }
-
-
-
-    // Try to find the escrow by checking multiple possible IDs (0, 1, 2, etc.)
-    // Escrow IDs are in format projectId:number where number auto-increments
-    for (let i = 0; i < 20; i++) { // Increased to 20 to find more escrows
-      const escrowId = `${projectId}:${i}`;
-      try {
-
-        const response = await fetch(`/api/escrow/${escrowId}/refresh`);
-        const result = await response.json();
-        if (result.success) {
-          // Found a valid escrow - verify it belongs to this user if we have principal
-          if (userPrincipal) {
-            try {
-              // Get escrow details to verify client
-              const escrowResponse = await fetch(`/api/escrow/${escrowId}/get`);
-              if (escrowResponse.ok) {
-                const escrowData = await escrowResponse.json();
-                if (escrowData.success && escrowData.data.client === userPrincipal) {
-
-                  return escrowId;
-                } else {
-
-                  continue;
-                }
-              }
-            } catch (e) {
-              // If we can't verify, still use it (might be the user's escrow)
-
-            }
-          }
-          // Found a valid escrow
-
-          return escrowId;
-        } else {
-
-        }
-      } catch (error: any) {
-
-        // Continue to next number
-        continue;
-      }
-    }
-
-    return null;
-  };
-
-  // Fetch escrow status for a booking
-  const fetchEscrowStatus = async (escrowId: string) => {
+  /**
+   * Look up a booking's live payment.
+   *
+   * One request, keyed on the booking. This used to construct the canister's
+   * `serviceId:N` escrow id and probe /api/escrow for twenty of them per card,
+   * then hand whatever it found to /api/payments/:paymentId — which never
+   * matched, because Postgres payment ids are `pay_…`. The server resolves the
+   * booking to its payment now, and it is the only party that can.
+   */
+  const fetchPayment = async (bookingId: string) => {
     try {
-      const response = await fetch(`/api/escrow/${escrowId}/refresh`);
+      const response = await fetch(`/api/payments/for-booking/${encodeURIComponent(bookingId)}`);
       const result = await response.json();
-      if (result.success) {
-        setEscrowStatuses(prev => ({
-          ...prev,
-          [escrowId]: {
-            funded: result.data.funded,
-            balanceE8s: result.data.balanceE8s,
-            status: result.data.funded ? 'funded' : 'created'
-          }
-        }));
-      }
+      setPayments(prev => ({
+        ...prev,
+        [bookingId]: result.success ? (result.data as BookingPayment | null) : null,
+      }));
     } catch (error) {
-      console.error('Error fetching escrow status:', error);
+      console.error('Error fetching payment for booking:', error);
+      setPayments(prev => ({ ...prev, [bookingId]: null }));
     }
   };
 
   // Release escrow funds using Plug wallet
-  const handleReleaseEscrow = async (e: React.MouseEvent, escrowId: string) => {
+  const handleRelease = async (e: React.MouseEvent, bookingId: string, paymentId: string) => {
     e.stopPropagation(); // Prevent card click
 
-    if (!confirm('Are you sure you want to release the escrow? Funds will be transferred to the freelancer.')) {
+    if (!confirm('Release this payment? The funds will be transferred to the freelancer.')) {
       return;
     }
 
-    setProcessingEscrow(prev => ({ ...prev, [escrowId]: 'releasing' }));
+    setProcessingPayment(prev => ({ ...prev, [bookingId]: 'releasing' }));
 
     try {
-      // Release is one authenticated request now. This previously connected
-      // Plug, built an escrow actor from a Candid IDL, read the escrow, worked
-      // out the service price and called escrow.release() — roughly 100 lines
-      // of wallet plumbing in the browser. Whether the caller may release is
+      // Release is one authenticated request. This previously connected Plug,
+      // built an escrow actor from a Candid IDL, read the escrow, worked out
+      // the service price and called escrow.release() — roughly 100 lines of
+      // wallet plumbing in the browser. Whether the caller may release is
       // decided server-side; only the client who paid can.
-      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/release`, {
+      const res = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -227,32 +193,31 @@ export default function ClientProjects() {
       }
 
       alert('Payment released to the freelancer.');
-      await fetchEscrowStatus(escrowId);
+      await fetchPayment(bookingId);
     } catch (error: any) {
-      console.error('Error releasing escrow:', error);
-      alert(`Failed to release escrow: ${error.message || 'Unknown error'}`);
+      console.error('Error releasing payment:', error);
+      alert(`Could not release the payment: ${error.message || 'unknown error'}`);
     } finally {
-      setProcessingEscrow(prev => {
+      setProcessingPayment(prev => {
         const newState = { ...prev };
-        delete newState[escrowId];
+        delete newState[bookingId];
         return newState;
       });
     }
   };
 
-  // Refund escrow funds using Plug wallet
-  const handleRefundEscrow = async (e: React.MouseEvent, escrowId: string) => {
+  const handleRefund = async (e: React.MouseEvent, bookingId: string, paymentId: string) => {
     e.stopPropagation(); // Prevent card click
-    if (!confirm('Are you sure you want to refund this escrow? Funds will be returned to your wallet.')) {
+    if (!confirm('Request a refund? The funds will be returned to your original payment method.')) {
       return;
     }
 
-    setProcessingEscrow(prev => ({ ...prev, [escrowId]: 'refunding' }));
+    setProcessingPayment(prev => ({ ...prev, [bookingId]: 'refunding' }));
 
     try {
       // Same shape as release: the server decides eligibility and how much
       // remains refundable, rather than the browser reading the escrow itself.
-      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/refund`, {
+      const res = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'requested_by_customer' }),
@@ -264,49 +229,28 @@ export default function ClientProjects() {
       }
 
       alert('Payment refunded.');
-      await fetchEscrowStatus(escrowId);
+      await fetchPayment(bookingId);
     } catch (error: any) {
-      console.error('Error refunding escrow:', error);
-      alert(`Failed to refund escrow: ${error.message || 'Unknown error'}`);
+      console.error('Error refunding payment:', error);
+      alert(`Could not refund the payment: ${error.message || 'unknown error'}`);
     } finally {
-      setProcessingEscrow(prev => {
+      setProcessingPayment(prev => {
         const newState = { ...prev };
-        delete newState[escrowId];
+        delete newState[bookingId];
         return newState;
       });
     }
   };
 
-  // Fetch escrow statuses for all bookings with escrow payments
+  // Resolve each booking to its payment, so the cards can offer release and
+  // refund. One request per booking, and only for bookings not already looked
+  // up — the escrow version fired twenty per card on every render of the list.
   useEffect(() => {
-    const fetchEscrows = async () => {
-      if (bookings.length > 0) {
-
-        for (const booking of bookings) {
-          // Only fetch if payment status indicates escrow
-          const isEscrowPayment = getStatusString(booking.payment_status) === 'HeldInEscrow' || booking.payment_method === 'escrow';
-          if (isEscrowPayment) {
-
-            const escrowId = await getEscrowId(booking);
-            if (escrowId) {
-
-              // Store the escrow ID for this booking
-              setEscrowIds(prev => ({
-                ...prev,
-                [booking.booking_id]: escrowId
-              }));
-              // Fetch status if not already fetched
-              if (!escrowStatuses[escrowId]) {
-                await fetchEscrowStatus(escrowId);
-              }
-            } else {
-
-            }
-          }
-        }
+    for (const booking of bookings) {
+      if (!(booking.booking_id in payments)) {
+        fetchPayment(booking.booking_id);
       }
-    };
-    fetchEscrows();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings]);
 
@@ -390,7 +334,7 @@ export default function ClientProjects() {
             </p>
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
               <p className="text-sm text-blue-800">
-                Newly created escrow payments will appear here once they are funded.
+                Projects appear here once you book a service or assign a job.
               </p>
             </div>
           </div>
@@ -401,40 +345,18 @@ export default function ClientProjects() {
           {allProjects.length > 0 ? (
             allProjects
               .filter((project) => {
-                // Apply status filter if set
-                if (statusFilter && project.displayStatus !== statusFilter) {
-                  return false;
-                }
-
-                // Show all non-escrow projects
-                const isEscrowPayment = project.payment_method === 'escrow' || getStatusString(project.payment_status) === 'HeldInEscrow';
-                if (!isEscrowPayment) {
-                  return true;
-                }
-
-                // For escrow projects:
-                const escrowId = escrowIds[project.id];
-
-                // If escrow ID not found yet, still show it (escrow lookup might be in progress)
-                if (!escrowId) {
-                  return true;
-                }
-
-                // If escrow ID found, check if it's funded
-                const escrowStatus = escrowStatuses[escrowId];
-                if (!escrowStatus) {
-                  return true; // Still loading status, show it
-                }
-
-                // Only show if funded
-                return escrowStatus.funded;
+                // The status filter is the only one left. There used to be a
+                // second rule here that hid escrow projects until their escrow
+                // read as funded — a distinction that only meant something
+                // while an ICP escrow could be created and then never paid
+                // into. It has also been inert for as long as the escrow
+                // lookup has been returning 410, so dropping it changes
+                // nothing a user would see.
+                return !statusFilter || project.displayStatus === statusFilter;
               })
               .map((project) => {
-                // Get the escrow ID for this project
-                const escrowId = escrowIds[project.id];
-                const escrowStatus = escrowId ? escrowStatuses[escrowId] : null;
-                const isEscrowPayment = project.payment_method === 'escrow' || getStatusString(project.payment_status) === 'HeldInEscrow';
-                const isProcessing = escrowId && processingEscrow[escrowId];
+                const payment = payments[project.id];
+                const isProcessing = processingPayment[project.id];
 
                 return (
                   <Card
@@ -471,7 +393,7 @@ export default function ClientProjects() {
                         </div>
                         <div className="text-right shrink-0 max-w-[140px]">
                           <div className="text-base font-semibold text-[#0B1F36] truncate">
-                            {project.amount.toFixed(4) + ' ICP'}
+                            {formatMoney(project.amountMinor, project.currency)}
                           </div>
                           <div className="text-sm text-gray-500">
                             {formatBookingDateShort(project.createdAt)}
@@ -506,19 +428,19 @@ export default function ClientProjects() {
                           </span>
                         </div>
 
-                        {/* Escrow Actions - Only show for funded escrows */}
-                        {isEscrowPayment && escrowId && escrowStatus && escrowStatus.funded && project.displayStatus !== 'Completed' && project.displayStatus !== 'CompletedAndPaid' && (
+                        {/* Only a held payment can be released or refunded. */}
+                        {isHeld(payment) && project.displayStatus !== 'Completed' && project.displayStatus !== 'CompletedAndPaid' && (
                           <div className="mt-4 pt-4 border-t border-gray-200">
                             <div className="flex items-center gap-2 mb-3">
                               <Wallet size={14} className="text-purple-600" />
-                              <span className="text-xs font-medium text-gray-700">Escrow Payment</span>
+                              <span className="text-xs font-medium text-gray-700">Payment held</span>
                               <Badge variant="default" className="text-xs bg-green-600">
-                                ✓ Funded
+                                {formatMoney(payment!.amount_minor, payment!.currency)}
                               </Badge>
                             </div>
                             <div className="space-y-2">
                               <button
-                                onClick={(e) => handleReleaseEscrow(e, escrowId)}
+                                onClick={(e) => handleRelease(e, project.id, payment!.id)}
                                 disabled={!!isProcessing}
                                 className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                               >
@@ -535,7 +457,7 @@ export default function ClientProjects() {
                                 )}
                               </button>
                               <button
-                                onClick={(e) => handleRefundEscrow(e, escrowId)}
+                                onClick={(e) => handleRefund(e, project.id, payment!.id)}
                                 disabled={!!isProcessing}
                                 className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                               >

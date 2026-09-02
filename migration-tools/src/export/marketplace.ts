@@ -85,6 +85,22 @@ export interface ExportedBooking {
   clientRating: number | null;
   freelancerReview: string | null;
   freelancerRating: number | null;
+
+  /**
+   * The trail back to escrow.mo and the ICP ledger.
+   *
+   * The canister never stored an escrow id on the booking — the frontend
+   * reconstructed one as `serviceId:N` and probed for it — so these four are
+   * the only recorded link between a booking and the money that was actually
+   * held for it. They are captured verbatim rather than interpreted: after the
+   * canisters are deleted, nothing can produce them again, and an escrow whose
+   * funds were never released has to be traceable to the booking it belonged
+   * to.
+   */
+  paymentId: string | null;
+  transactionId: string | null;
+  escrowAmountE8s: string | null;
+  ledgerDepositBlock: string | null;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -128,7 +144,8 @@ function normalisePackage(raw: any): ExportedPackage {
   };
 }
 
-function normaliseBooking(raw: any): ExportedBooking {
+/** Exported for the escrow-link tests; not called from outside this module. */
+export function normaliseBooking(raw: any): ExportedBooking {
   return {
     id: raw.booking_id,
     serviceId: raw.service_id,
@@ -172,6 +189,11 @@ function normaliseBooking(raw: any): ExportedBooking {
     clientRating: opt<number>(raw.client_rating),
     freelancerReview: opt<string>(raw.freelancer_review),
     freelancerRating: opt<number>(raw.freelancer_rating),
+    // Empty strings stay null: the canister used "" for absent, not a value.
+    paymentId: raw.payment_id ? String(raw.payment_id) : null,
+    transactionId: raw.transaction_id ? String(raw.transaction_id) : null,
+    escrowAmountE8s: toBigInt(raw.escrow_amount_e8s)?.toString() ?? null,
+    ledgerDepositBlock: toBigInt(opt<bigint>(raw.ledger_deposit_block))?.toString() ?? null,
   };
 }
 

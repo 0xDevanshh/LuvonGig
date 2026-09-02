@@ -44,14 +44,48 @@ const schema = z.object({
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
 });
 
-const parsed = schema.safeParse(process.env);
+const isTestRun = Boolean(process.env.VITEST);
+
+/**
+ * Values substituted only under Vitest, and only for variables the environment
+ * does not already supply.
+ *
+ * Every test file imports this module transitively (via app.ts), including the
+ * suites that skip themselves when there is no database. Exiting the process
+ * here fails *collection* for all of them, so `npm test` without a
+ * DATABASE_URL reported six failed suites rather than the hermetic unit run the
+ * skips were written for.
+ *
+ * The database placeholder deliberately points at nothing: the test files
+ * derive `hasDb` from process.env directly, so filling this in does not make a
+ * database-less run look like it has one, and anything that does try to connect
+ * fails at the point of use instead of at import.
+ */
+const TEST_FALLBACKS: Record<string, string> = {
+  DATABASE_URL: 'postgres://placeholder.invalid/none',
+  JWT_SECRET: 'test-only-secret-at-least-32-characters',
+};
+
+let parsed = schema.safeParse(process.env);
+
+if (!parsed.success && isTestRun) {
+  const filled: Record<string, string | undefined> = { ...process.env };
+  for (const [key, value] of Object.entries(TEST_FALLBACKS)) {
+    if (!filled[key]) filled[key] = value;
+  }
+  parsed = schema.safeParse(filled);
+}
 
 if (!parsed.success) {
   const issues = parsed.error.issues
     .map((i) => `  - ${i.path.join('.') || '(root)'}: ${i.message}`)
     .join('\n');
+  const message = `Invalid environment configuration:\n${issues}\n`;
+  // A test run wants the failure attributed to the importing file, not a bare
+  // "process.exit unexpectedly called".
+  if (isTestRun) throw new Error(message);
   // Fail fast and loudly: a half-configured API is worse than one that won't boot.
-  console.error(`Invalid environment configuration:\n${issues}\n`);
+  console.error(message);
   process.exit(1);
 }
 

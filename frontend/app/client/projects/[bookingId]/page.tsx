@@ -283,52 +283,28 @@ export default function ProjectDetailPage() {
     return 'Pending';
   };
 
-  // Get escrow ID from project - try multiple fields
-  const getEscrowId = (): string | null => {
+  /**
+   * The payment id for this booking, asked of the server.
+   *
+   * This used to guess: escrow_account, then payment_id, then transaction_id,
+   * then a constructed `serviceId:0` — all shaped like the canister's escrow
+   * ids, all of which 404 against `pay_…` Postgres ids. Payments reference
+   * bookings rather than the reverse, so the server is the only party that can
+   * answer this.
+   */
+  const resolvePaymentId = async (): Promise<string | null> => {
     if (!project) return null;
-
-    console.log('🔍 Looking for escrow ID in project:', {
-      payment_id: project.payment_id,
-      transaction_id: project.transaction_id,
-      escrow_account: project.escrow_account,
-      service_id: project.service_id,
-      package_service_id: project.package_details?.service_id
-    });
-
-    // Try escrow_account first (this is the actual escrow ID from booking response)
-    if (project.escrow_account && typeof project.escrow_account === 'string') {
-      // escrow_account is the escrow ID in format: serviceId:number
-      if (project.escrow_account.includes(':')) {
-        console.log('✅ Found escrow ID in escrow_account:', project.escrow_account);
-        return project.escrow_account;
-      }
+    try {
+      const res = await fetch(
+        `/api/payments/for-booking/${encodeURIComponent(bookingId)}`,
+      );
+      const body = await res.json();
+      if (!res.ok || !body.success) return null;
+      return (body.data?.id as string | undefined) ?? null;
+    } catch (err) {
+      console.error('Error resolving payment for booking:', err);
+      return null;
     }
-
-    // Try payment_id (might be escrow ID)
-    if (project.payment_id && typeof project.payment_id === 'string') {
-      if (project.payment_id.includes(':')) {
-        console.log('✅ Found escrow ID in payment_id:', project.payment_id);
-        return project.payment_id;
-      }
-    }
-
-    // Try transaction_id
-    if (project.transaction_id && typeof project.transaction_id === 'string' && project.transaction_id.includes(':')) {
-      console.log('✅ Found escrow ID in transaction_id:', project.transaction_id);
-      return project.transaction_id;
-    }
-
-    // Last resort: construct from service_id
-    const serviceId = project.service_id || project.package_details?.service_id || (project.isJob ? project.id : null);
-    if (serviceId) {
-      // For jobs, we always try to find the escrow using serviceId:0, serviceId:1 etc.
-      const constructedId = `${serviceId}:0`;
-      console.log('⚠️ Constructed escrow ID:', constructedId);
-      return constructedId;
-    }
-
-    console.error('❌ No escrow ID found in project data');
-    return null;
   };
 
   // Helper to mark status and paid after release
@@ -405,26 +381,24 @@ export default function ProjectDetailPage() {
     }
   };
 
-  // Handle release funds - call escrow canister directly using Plug wallet
   const handleReleaseFunds = async () => {
-    let escrowId = getEscrowId();
-    if (!escrowId) {
-      alert('Escrow ID not found. Cannot release funds. Please check if the escrow exists.');
-      return;
-    }
-
-    if (!confirm('Are you sure you want to release funds to the freelancer? This action cannot be undone.')) {
+    if (!confirm('Release the payment to the freelancer? This cannot be undone.')) {
       return;
     }
 
     setLoading(true);
 
     try {
+      const paymentId = await resolvePaymentId();
+      if (!paymentId) {
+        throw new Error('This booking has no payment to release.');
+      }
+
       // One authenticated request. This previously connected Plug, built an
       // escrow actor from a Candid IDL, read the escrow and treasury, then
       // called escrow.release() — over a hundred lines of wallet plumbing in
       // the browser. Eligibility is decided server-side now.
-      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/release`, {
+      const res = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -438,58 +412,34 @@ export default function ProjectDetailPage() {
       await fetchProjectDetails();
     } catch (error) {
       console.error('Error releasing funds:', error);
-      alert(error instanceof Error ? error.message : 'Failed to release funds. Please try again.');
+      alert(error instanceof Error ? error.message : 'Could not release the payment.');
     } finally {
       setLoading(false);
     }
-  };;
+  };
 
-  // Handle refund funds - call escrow canister directly using Plug wallet
   const handleRefundFunds = async () => {
-    let escrowId = getEscrowId();
-    if (!escrowId) {
-      alert('Escrow ID not found. Cannot refund funds. Please check if the escrow exists.');
-      return;
-    }
-
-    if (!confirm('Are you sure you want to refund the funds? This will return the money to your wallet.')) {
-      return;
-    }
-
-    // Check if Plug wallet is available
-    if (typeof window === 'undefined' || !(window as any).ic?.plug) {
-      alert('Plug wallet not found. Please install and connect Plug wallet to refund funds.');
-      return;
-    }
-
-    const plug = (window as any).ic.plug;
-
-    // Check if wallet is connected
-    try {
-      const isConnected = await plug.isConnected();
-      if (!isConnected) {
-        const connected = await plug.requestConnect({
-          whitelist: [process.env.NEXT_PUBLIC_ESCROW_CANISTER_ID || ''],
-          host: process.env.NEXT_PUBLIC_IC_HOST || 'https://ic0.app',
-        });
-        if (!connected) {
-          alert('Please connect your Plug wallet to refund funds.');
-          return;
-        }
-      }
-    } catch (error) {
-      alert('Failed to connect Plug wallet. Please try again.');
+    if (!confirm('Request a refund? The funds will be returned to your original payment method.')) {
       return;
     }
 
     setRefunding(true);
 
     try {
+      const paymentId = await resolvePaymentId();
+      if (!paymentId) {
+        throw new Error('This booking has no payment to refund.');
+      }
+
       // Same as release: one authenticated request. The browser no longer
       // connects a wallet, builds an escrow actor, or hunts for the escrow id
       // across candidate values — the server knows which payment this is and
       // how much of it remains refundable.
-      const res = await fetch(`/api/payments/${encodeURIComponent(escrowId)}/refund`, {
+      //
+      // The Plug-wallet gate that used to stand in front of this refused the
+      // refund outright unless an ICP wallet was installed and connected,
+      // months after the money stopped moving over ICP.
+      const res = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'requested_by_customer' }),
@@ -504,11 +454,11 @@ export default function ProjectDetailPage() {
       await fetchProjectDetails();
     } catch (error) {
       console.error('Error refunding:', error);
-      alert(error instanceof Error ? error.message : 'Failed to refund. Please try again.');
+      alert(error instanceof Error ? error.message : 'Could not refund the payment.');
     } finally {
       setRefunding(false);
     }
-  };;
+  };
 
   // Handle mark as complete
   const handleMarkAsComplete = async () => {

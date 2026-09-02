@@ -441,6 +441,31 @@ paymentsRouter.post('/:paymentId/refund',
     }
   });
 
+/**
+ * The live payment for a booking, or null.
+ *
+ * Exists because a booking does not carry its payment id — payments reference
+ * bookings, not the reverse — so the client had no way to name the payment it
+ * wanted to release. The old UI guessed, constructing the canister's
+ * `serviceId:N` escrow id and hoping it addressed something; against Postgres
+ * ids that always 404s.
+ *
+ * Two segments, so it cannot be mistaken for a payment id by the route below.
+ */
+paymentsRouter.get('/for-booking/:bookingId', async (req, res, next) => {
+  try {
+    const payment = await repo.getPaymentForBooking(param(req, 'bookingId'));
+    // No payment yet is a normal state for an unpaid booking, not an error.
+    if (!payment) return ok(res, null);
+    if (payment.payer_id !== req.user!.userId && payment.payee_id !== req.user!.userId) {
+      return next(notFound('Payment not found'));
+    }
+    ok(res, toPaymentDto(payment));
+  } catch (err) {
+    next(err);
+  }
+});
+
 paymentsRouter.get('/:paymentId', async (req, res, next) => {
   try {
     const payment = await repo.getPayment(param(req, 'paymentId'));

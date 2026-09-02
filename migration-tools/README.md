@@ -27,6 +27,8 @@ npm run export:hackquest
 npm run export:sidestore
 ```
 
+The escrow canister is not in this list — see [Escrow](#escrow) below.
+
 Reads canister query methods only — nothing is ever written back to a canister.
 
 Output lands in `./exports`, which is gitignored and **must stay that way**:
@@ -41,10 +43,39 @@ gone the data is unrecoverable.
 endpoint, so they are gathered by iterating users in both roles and deduping.
 `npm run export` handles this; running the steps by hand does not.
 
+## Escrow
+
+```bash
+npm run export:escrow                     # ids from ./exports (run the export first)
+npm run export:escrow -- --ids SVC_1:0    # or name them
+npm run export:escrow -- --probe SVC_1    # or sweep SVC_1:0 .. :19
+```
+
+Deliberately **not** part of `npm run export`, and it answers a different
+question: not "what records are here" but "is there still money here". Deleting
+the escrow canister with ICP inside strands those funds permanently, and the
+application no longer has a refund path — the escrow routes were removed in
+Phase 8. Writes `escrows.json` and `escrow_summary.json`.
+
+Read-only, and structurally so: `src/idl/escrow.did.js` declares only the query
+methods, so `release` and `refund` are not reachable from this package at all.
+
+Its enumeration is a best effort, because escrow.mo has no bulk query — `get`
+takes one id and traps when it misses. The canister also never stored an escrow
+id on the booking, so ids have to be guessed from booking and service ids the
+same way the old frontend guessed them. **A clean report means "nothing found
+among the ids we could name", not "the canister is empty."**
+
 ## Import
 
-Not yet written. Will read `./exports` and upsert into the schema, keyed on the
-original canister IDs so re-running is safe and existing URLs keep resolving.
+Reads `./exports` and upserts into the schema, keyed on the original canister
+IDs, so re-running is safe and existing URLs keep resolving.
+
+```bash
+npm run import              # rehearse; exits non-zero if anything was skipped
+npm run import -- --confirm # required unless DATABASE_URL is a preview branch
+npm run reconcile           # compare row counts against the exports
+```
 
 ## What the exporters handle
 
