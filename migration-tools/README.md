@@ -1,7 +1,8 @@
 # migration-tools
 
-One-off tooling to move LuvonGig off the ICP canisters in [`../backend`](../backend)
-and into the Neon Postgres schema owned by [`../backend_v1`](../backend_v1).
+One-off tooling to move LuvonGig off the ICP canisters — their Motoko source
+lives in a separate repo, not here — and into the Neon Postgres schema owned by
+[`../backend_v1`](../backend_v1).
 
 **This package is temporary.** It exists only to carry data across, and holds
 the only `@dfinity/*` dependencies left in the project — deliberately kept out
@@ -13,7 +14,7 @@ directory at Phase 8.
 ```bash
 cd migration-tools
 npm install
-cp .env.example .env    # canister IDs are pre-filled from ../backend/canister_ids.json
+cp .env.example .env    # canister IDs are already filled in; only DATABASE_URL is yours to set
 ```
 
 ## Export
