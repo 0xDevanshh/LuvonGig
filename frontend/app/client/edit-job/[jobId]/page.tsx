@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     X,
     DollarSign,
@@ -15,53 +18,41 @@ import {
     Save,
     Loader2
 } from 'lucide-react'
-import { useUserContext } from '@/contexts/UserContext'
-import { getUserProfileByEmail } from '@/lib/user-profile'
+import { getJob, updateJob } from '@/lib/api/jobs'
+import { formatMoney, toMajorUnits, toMinorUnits } from '@/lib/currency'
 
 export default function EditJobPage({ params }: { params: Promise<{ jobId: string }> }) {
     const router = useRouter()
     const resolvedParams = use(params)
     const jobId = resolvedParams.jobId
-    const { profile } = useUserContext()
 
     const [loading, setLoading] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [currency, setCurrency] = useState('USD')
     const [formData, setFormData] = useState({
         title: '',
         description: '',
         budget: '',
-        budgetType: 'FIXED',
+        budgetType: 'fixed' as 'fixed' | 'hourly',
         skills: [] as string[],
-        category: '',
-        experience_level: 'Intermediate',
-        project_type: 'One-time',
-        timeline: '1-2 weeks'
     })
     const [newSkill, setNewSkill] = useState('')
 
     useEffect(() => {
         const fetchJob = async () => {
             try {
-                const response = await fetch(`/api/marketplace/job-posts/${jobId}`)
-                const result = await response.json()
-                if (result.success) {
-                    const job = result.data
-                    setFormData({
-                        title: job.title,
-                        description: job.description,
-                        budget: job.budgetAmount.toString(),
-                        budgetType: job.budgetType.HOURLY !== undefined ? 'HOURLY' : 'FIXED',
-                        skills: job.requiredSkills || [],
-                        category: 'Software',
-                        experience_level: 'Intermediate',
-                        project_type: 'One-time',
-                        timeline: 'TBD'
-                    })
-                } else {
-                    alert('Failed to fetch job details: ' + result.error)
-                }
+                const job = await getJob(jobId)
+                setCurrency(job.currency || 'USD')
+                setFormData({
+                    title: job.title,
+                    description: job.description,
+                    budget: toMajorUnits(job.budget_minor, job.currency).toString(),
+                    budgetType: job.budgetType.toLowerCase() === 'hourly' ? 'hourly' : 'fixed',
+                    skills: job.requiredSkills || [],
+                })
             } catch (err) {
                 console.error('Error fetching job:', err)
+                alert('Failed to fetch job details')
             } finally {
                 setLoading(false)
             }
@@ -97,43 +88,27 @@ export default function EditJobPage({ params }: { params: Promise<{ jobId: strin
             return
         }
 
-        if (!profile?.email) {
-            alert('You must be logged in')
+        const budgetFloat = parseFloat(formData.budget)
+        if (isNaN(budgetFloat)) {
+            alert('Invalid budget amount')
             return
         }
 
         setIsSubmitting(true)
 
         try {
-            const userProfileData = await getUserProfileByEmail(profile.email)
-            const clientId = userProfileData.userId || profile.email
-
-            const response = await fetch(`/api/marketplace/job-posts/${jobId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: clientId,
-                    updates: {
-                        title: formData.title,
-                        description: formData.description,
-                        requiredSkills: formData.skills,
-                        budgetType: formData.budgetType === 'HOURLY' ? { HOURLY: null } : { FIXED: null },
-                        budgetAmount: formData.budget // Sending as string, API will handle conversion to BigInt e8s
-                    }
-                })
+            await updateJob(jobId, {
+                title: formData.title,
+                description: formData.description,
+                required_skills: formData.skills,
+                budget_type: formData.budgetType,
+                budget_minor: toMinorUnits(budgetFloat, currency),
             })
 
-            const result = await response.json()
-
-            if (result.success) {
-                alert('Job updated successfully!')
-                router.push('/client/my-job-posts')
-            } else {
-                alert('Failed to update job: ' + result.error)
-            }
+            router.push('/client/my-job-posts')
         } catch (error) {
             console.error('Error updating job:', error)
-            alert('Failed to update job')
+            alert(error instanceof Error ? error.message : 'Failed to update job')
         } finally {
             setIsSubmitting(false)
         }
@@ -141,80 +116,86 @@ export default function EditJobPage({ params }: { params: Promise<{ jobId: strin
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <div className="mx-auto max-w-4xl p-6">
+                <Skeleton className="mb-6 h-9 w-64" />
+                <Skeleton className="h-96" />
             </div>
         )
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Job Post</h1>
-                <p className="text-gray-600">Update your project details</p>
-            </div>
+        <div className="mx-auto max-w-4xl p-6">
+            <PageHeader title="Edit job post" description="Update your project details." />
 
-            <div className="space-y-6">
+            <div className="mt-8 space-y-6">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <FileText className="w-5 h-5 mr-2" />
-                            Project Details
+                            <FileText className="mr-2 size-5 text-primary" />
+                            Project details
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Job Title *</label>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="title">Job title *</Label>
                             <Input
+                                id="title"
                                 value={formData.title}
                                 onChange={(e) => handleInputChange('title', e.target.value)}
-                                placeholder="Job Title"
+                                placeholder="Job title"
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="description">Description *</Label>
                             <Textarea
+                                id="description"
                                 value={formData.description}
                                 onChange={(e) => handleInputChange('description', e.target.value)}
                                 rows={6}
-                                placeholder="Project Description"
+                                placeholder="Project description"
                             />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Budget *</label>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="budget">Budget ({currency}) *</Label>
                                 <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <DollarSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                                     <Input
+                                        id="budget"
                                         type="number"
-                                        step="0.00001"
+                                        step="0.01"
+                                        min="0"
                                         value={formData.budget}
                                         onChange={(e) => handleInputChange('budget', e.target.value)}
-                                        className="pl-10"
-                                        placeholder="1000.00001"
+                                        className="pl-9"
+                                        placeholder="1000.00"
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Budget Type</label>
+                            <div className="flex flex-col gap-1.5">
+                                <Label htmlFor="budgetType">Budget type</Label>
                                 <select
+                                    id="budgetType"
                                     value={formData.budgetType}
                                     onChange={(e) => handleInputChange('budgetType', e.target.value)}
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
                                 >
-                                    <option value="FIXED">Fixed Price</option>
-                                    <option value="HOURLY">Hourly Rate</option>
+                                    <option value="fixed">Fixed price</option>
+                                    <option value="hourly">Hourly rate</option>
                                 </select>
                             </div>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                            Current budget: {formatMoney(toMinorUnits(formData.budget || '0', currency), currency)}
+                        </p>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Tag className="w-5 h-5 mr-2" />
-                            Skills Required
+                            <Tag className="mr-2 size-5 text-primary" />
+                            Skills required
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -223,16 +204,16 @@ export default function EditJobPage({ params }: { params: Promise<{ jobId: strin
                                 value={newSkill}
                                 onChange={(e) => setNewSkill(e.target.value)}
                                 placeholder="Add a skill"
-                                onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkill())}
                             />
-                            <Button onClick={handleAddSkill} variant="outline">Add</Button>
+                            <Button type="button" onClick={handleAddSkill} variant="outline">Add</Button>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {formData.skills.map((skill, index) => (
-                                <Badge key={index} variant="secondary" className="gap-1 text-sm">
+                            {formData.skills.map((skill) => (
+                                <Badge key={skill} variant="secondary" className="gap-1 text-sm">
                                     {skill}
-                                    <button onClick={() => handleRemoveSkill(skill)} className="ml-1 hover:text-red-500">
-                                        <X className="w-3 h-3" />
+                                    <button onClick={() => handleRemoveSkill(skill)} aria-label={`Remove ${skill}`}>
+                                        <X className="size-3" />
                                     </button>
                                 </Badge>
                             ))}
@@ -242,9 +223,9 @@ export default function EditJobPage({ params }: { params: Promise<{ jobId: strin
 
                 <div className="flex justify-end gap-4">
                     <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                        Save Changes
+                    <Button onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                        Save changes
                     </Button>
                 </div>
             </div>
