@@ -1,16 +1,20 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Eye, EyeOff } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { resetPasswordAction } from '@/lib/actions/auth'
+
 const ResetPasswordForm = () => {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
-  const email = searchParams.get('email') || localStorage.getItem('resetEmail') || 'user@example.com'
 
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(''))
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -18,59 +22,16 @@ const ResetPasswordForm = () => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState('')
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
-  // Initialize refs array
-  useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, 6)
-  }, [])
-  const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return
-    const newOtp = [...otp]
-    newOtp[index] = value.substring(0, 1)
-    setOtp(newOtp)
-    // Auto focus to next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus()
-    }
-  }
-  const handleKeyDown = (
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-  const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
-    const pasteData = e.clipboardData.getData('text/plain').trim()
-    if (!/^\d+$/.test(pasteData)) return
-    const digits = pasteData.split('').slice(0, 6)
-    const newOtp = [...otp]
-    digits.forEach((digit, index) => {
-      if (index < 6) newOtp[index] = digit
-    })
-    setOtp(newOtp)
-    // Focus the next empty input or the last input
-    const nextEmptyIndex = newOtp.findIndex((val) => !val)
-    if (nextEmptyIndex !== -1) {
-      inputRefs.current[nextEmptyIndex]?.focus()
-    } else {
-      inputRefs.current[5]?.focus()
-    }
-  }
+
   const validatePassword = (password: string) => {
     const hasUpperCase = /[A-Z]/.test(password)
     const hasLowerCase = /[a-z]/.test(password)
     const hasDigit = /\d/.test(password)
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
-      password,
-    )
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
     const hasMinLength = password.length >= 8
-    return (
-      hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar && hasMinLength
-    )
+    return hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar && hasMinLength
   }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -83,16 +44,12 @@ const ResetPasswordForm = () => {
       return
     }
 
- 
-
-    // Validate password
     if (!validatePassword(newPassword)) {
       setError("Password doesn't meet the requirements")
       setIsLoading(false)
       return
     }
 
-    // Check if passwords match
     if (newPassword !== confirmPassword) {
       setError("Passwords don't match")
       setIsLoading(false)
@@ -121,105 +78,89 @@ const ResetPasswordForm = () => {
       setIsLoading(false)
     }
   }
+
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900">
-              Invalid Reset Link
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              This password reset link is invalid or has expired.
-            </p>
-            <div className="mt-6">
-              <a
-                href="/forgot-password"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Request a new reset link
-              </a>
-            </div>
-          </div>
-        </div>
+      <div className="text-center">
+        <h1 className="font-heading text-h1 font-semibold text-foreground">Invalid reset link</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This password reset link is invalid or has expired.
+        </p>
+        <Link href="/forgot-password" className="mt-6 inline-block text-sm font-medium text-primary hover:underline">
+          Request a new reset link
+        </Link>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="max-w-md w-full mx-auto px-4">
-      <div className="text-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-         Change Password
-        </h1>
-       
+    <div>
+      <div className="mb-8 text-center">
+        <h1 className="font-heading text-h1 font-semibold text-foreground">Reset your password</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Choose a new password for your account.</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-md mb-4">
+        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
           {error}
         </div>
       )}
-
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-2 rounded-md mb-4">
+        <div className="mb-4 rounded-md border border-success/20 bg-success/10 px-4 py-2.5 text-sm text-success">
           {success}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        
-        
-        <div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="newPassword">New password</Label>
           <div className="relative">
-            <input
+            <Input
+              id="newPassword"
               type={showNewPassword ? 'text' : 'password'}
-              placeholder="Enter your password here"
-              className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-400"
+              placeholder="Enter your new password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              required
+              className="pr-10"
             />
             <button
               type="button"
-              className="absolute right-4 top-1/2 transform -translate-y-1/2"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               onClick={() => setShowNewPassword(!showNewPassword)}
+              aria-label={showNewPassword ? 'Hide password' : 'Show password'}
             >
-              {showNewPassword ? (
-                <EyeOff className="text-gray-400 w-5 h-5" />
-              ) : (
-                <Eye className="text-gray-400 w-5 h-5" />
-              )}
+              {showNewPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
         </div>
-        <div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="confirmPassword">Confirm password</Label>
           <div className="relative">
-            <input
+            <Input
+              id="confirmPassword"
               type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Confirm your password here"
-              className="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-1 focus:ring-gray-400"
+              placeholder="Confirm your new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="pr-10"
             />
             <button
               type="button"
-              className="absolute right-4 top-1/2 transform -translate-y-1/2"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
             >
-              {showConfirmPassword ? (
-                <EyeOff className="text-gray-400 w-5 h-5" />
-              ) : (
-                <Eye className="text-gray-400 w-5 h-5" />
-              )}
+              {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
           </div>
         </div>
-        <button
-          type="submit"
-          className="w-full bg-black text-white py-3 px-4 rounded-full font-medium hover:bg-gray-800 transition-colors"
-        >
-          Submit
-        </button>
+
+        <Button type="submit" disabled={isLoading} className="mt-2 w-full">
+          {isLoading ? 'Resetting...' : 'Reset password'}
+        </Button>
       </form>
     </div>
   )

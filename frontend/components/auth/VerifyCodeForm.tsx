@@ -1,7 +1,11 @@
 'use client';
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, ArrowLeft, RefreshCw } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+
 const VerifyCodeForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,12 +22,7 @@ const VerifyCodeForm = () => {
   const [countdown, setCountdown] = useState(5);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  // Initialize refs array
-  useEffect(() => {
-    inputRefs.current = inputRefs.current.slice(0, 6);
-  }, []);
 
-  // Countdown timer for OTP expiry
   useEffect(() => {
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -33,7 +32,6 @@ const VerifyCodeForm = () => {
     }
   }, [timeLeft]);
 
-  // Countdown timer for redirect after successful password reset
   useEffect(() => {
     if (isResetSuccessful && countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -43,17 +41,17 @@ const VerifyCodeForm = () => {
     }
   }, [isResetSuccessful, countdown, router]);
 
-    const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
+
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value.substring(0, 1);
     setOtp(newOtp);
-    // Auto focus to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -73,14 +71,14 @@ const VerifyCodeForm = () => {
       if (index < 6) newOtp[index] = digit;
     });
     setOtp(newOtp);
-    // Focus the next empty input or the last input
-    const nextEmptyIndex = newOtp.findIndex(val => !val);
+    const nextEmptyIndex = newOtp.findIndex((val) => !val);
     if (nextEmptyIndex !== -1) {
       inputRefs.current[nextEmptyIndex]?.focus();
     } else {
       inputRefs.current[5]?.focus();
     }
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -118,7 +116,7 @@ const VerifyCodeForm = () => {
       if (result.success) {
         if (purpose === 'password-reset') {
           setIsResetSuccessful(true);
-          setSuccess('Password reset successful! Redirecting to signup in 5 seconds...');
+          setSuccess('Password reset successful! Redirecting to sign up in 5 seconds...');
         } else {
           setSuccess('Email verified successfully!');
           setTimeout(() => {
@@ -154,9 +152,9 @@ const VerifyCodeForm = () => {
 
       if (result.success) {
         setSuccess('OTP resent successfully!');
-        setTimeLeft(600); // Reset timer to 10 minutes
+        setTimeLeft(600);
         setCanResend(false);
-        setOtp(Array(6).fill('')); // Clear OTP inputs
+        setOtp(Array(6).fill(''));
       } else {
         setError(result.error || 'Failed to resend OTP');
       }
@@ -167,39 +165,37 @@ const VerifyCodeForm = () => {
     }
   };
 
-    return <div className="min-h-screen my-auto pt-40 max-w-md w-full mx-auto px-4">
-      <div className="mb-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Back
-        </button>
-      </div>
+  return (
+    <div>
+      <button
+        onClick={() => router.back()}
+        className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        Back
+      </button>
 
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail size={32} className="text-blue-600" />
+      <div className="mb-8 text-center">
+        <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-primary-soft">
+          <Mail className="size-5 text-primary-hover" />
         </div>
-        <h1 className="text-3xl font-bold text-[#161616] mb-4">
-          {purpose === 'password-reset' ? 'Reset Your Password' : 'Verify Your Email'}
+        <h1 className="font-heading text-h1 font-semibold text-foreground">
+          {purpose === 'password-reset' ? 'Reset your password' : 'Verify your email'}
         </h1>
-        <p className="text-gray-600">
+        <p className="mt-2 text-sm text-muted-foreground">
           {purpose === 'password-reset'
             ? "We've sent a 6-digit password reset code to"
-            : "We've sent a 6-digit verification code to"
-          }
+            : "We've sent a 6-digit verification code to"}
         </p>
-        <p className="font-semibold text-[#161616]">{email}</p>
+        <p className="font-medium text-foreground">{email}</p>
       </div>
 
       {success && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+        <div className="mb-4 rounded-md border border-success/20 bg-success/10 px-4 py-2.5 text-sm text-success">
           {success}
           {isResetSuccessful && (
-            <div className="mt-2 text-center">
-              <div className="inline-flex items-center justify-center w-8 h-8 bg-green-200 rounded-full text-green-800 font-bold">
+            <div className="mt-2 flex justify-center">
+              <div className="flex size-8 items-center justify-center rounded-full bg-success/20 font-semibold text-success">
                 {countdown}
               </div>
             </div>
@@ -208,66 +204,66 @@ const VerifyCodeForm = () => {
       )}
 
       {error && !isResetSuccessful && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
           {error}
         </div>
       )}
+
       {!isResetSuccessful && (
         <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <div className="flex justify-center gap-2 mb-4">
-              {otp.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={(el: HTMLInputElement | null) => {
-                    if (el) {
-                      inputRefs.current[index] = el;
-                    }
-                  }}
-                  id={`otp-${index}`}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                  className="w-12 h-12 text-center text-xl font-semibold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              ))}
-            </div>
+          <div className="mb-6 flex justify-center gap-2">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el: HTMLInputElement | null) => {
+                  if (el) {
+                    inputRefs.current[index] = el;
+                  }
+                }}
+                id={`otp-${index}`}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={index === 0 ? handlePaste : undefined}
+                className="size-12 rounded-lg border border-border text-center text-lg font-semibold text-foreground outline-none focus:ring-2 focus:ring-ring/50"
+                required
+              />
+            ))}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading || otp.join('').length !== 6}
-            className="w-full bg-[#000000] text-white py-3 rounded-full font-bold shadow-md hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
-          >
-            {isLoading ? 'Verifying...' : (purpose === 'password-reset' ? 'Reset Password' : 'Verify Email')}
-          </button>
+          <Button type="submit" disabled={isLoading || otp.join('').length !== 6} className="w-full">
+            {isLoading
+              ? 'Verifying...'
+              : purpose === 'password-reset'
+                ? 'Reset password'
+                : 'Verify email'}
+          </Button>
         </form>
       )}
 
       {!isResetSuccessful && (
-        <div className="text-center">
+        <div className="mt-6 text-center">
           {timeLeft > 0 ? (
-            <p className="text-gray-600 text-sm">
-              Resend code in <span className="font-semibold">{formatTime(timeLeft)}</span>
+            <p className="text-sm text-muted-foreground">
+              Resend code in <span className="font-medium text-foreground">{formatTime(timeLeft)}</span>
             </p>
           ) : (
             <button
               onClick={handleResend}
               disabled={isLoading || !canResend}
-              className="flex items-center justify-center mx-auto text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mx-auto flex items-center justify-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:opacity-50"
             >
-              <RefreshCw size={16} className="mr-2" />
-              Resend OTP
+              <RefreshCw className="size-4" />
+              Resend code
             </button>
           )}
         </div>
       )}
-    </div>;
+    </div>
+  );
 };
 export default VerifyCodeForm;
