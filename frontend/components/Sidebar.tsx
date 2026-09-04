@@ -2,12 +2,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
 
 import {
-  LayoutGrid, Users, FolderOpen, Gift, User,
-  MessageSquare, Code, Wallet, BarChart2,
-  RefreshCw, Coffee, CreditCard, PlusCircle,
+  LayoutGrid, Users, User,
+  MessageSquare, Code, PlusCircle,
   List, Search, Zap, Settings
 } from 'lucide-react';
 import { useUserContext } from '@/contexts/UserContext';
@@ -31,11 +29,6 @@ export function Sidebar() {
       label: 'Browse Jobs',
       path: '/freelancer/browse-jobs'
     },
-    /* {
-      icon: <FolderOpen size={20} />,
-      label: 'Browse Projects',
-      path: '/freelancer/browse-projects'
-    }, */
     {
       icon: <Search size={20} />,
       label: 'Find Experts',
@@ -56,11 +49,6 @@ export function Sidebar() {
       label: 'Subscription',
       path: '/freelancer/subscription'
     },
-    // {
-    //   icon: <Gift size={20} />,
-    //   label: 'Bounties',
-    //   path: '/freelancer/bounties'
-    // },
     {
       icon: <MessageSquare size={20} />,
       label: 'Messages',

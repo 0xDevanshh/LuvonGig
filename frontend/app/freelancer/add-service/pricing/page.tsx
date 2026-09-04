@@ -99,7 +99,7 @@ export default function AddServicePricing() {
                         handlePriceChange('basic', e.target.value)
                       }
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg outline-none"
-                      placeholder="Enter price in ICP"
+                      placeholder="Enter price in USD"
                     />
                   </div>
                 </div>
@@ -123,7 +123,7 @@ export default function AddServicePricing() {
                         handlePriceChange('basic', e.target.value)
                       }
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg outline-none"
-                      placeholder="Enter price in ICP"
+                      placeholder="Enter price in USD"
                     />
                   </div>
                 </div>
@@ -144,7 +144,7 @@ export default function AddServicePricing() {
                         handlePriceChange('advanced', e.target.value)
                       }
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg outline-none"
-                      placeholder="Enter price in ICP"
+                      placeholder="Enter price in USD"
                     />
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export default function AddServicePricing() {
                         handlePriceChange('premium', e.target.value)
                       }
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg outline-none"
-                      placeholder="Enter price in ICP"
+                      placeholder="Enter price in USD"
                     />
                   </div>
                 </div>

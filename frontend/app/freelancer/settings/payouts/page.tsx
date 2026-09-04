@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, CircleAlert, ExternalLink, Landmark, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface PayoutStatus {
   onboarded: boolean;
@@ -47,7 +48,7 @@ function PayoutSettings() {
     try {
       const res = await fetch('/api/payments/payouts/status');
       if (res.status === 401) {
-        router.push('/auth/login');
+        router.push('/login');
         return;
       }
       const body = await res.json();
@@ -100,57 +101,57 @@ function PayoutSettings() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="p-6">
+      <div className="mx-auto max-w-2xl space-y-6">
         <Link
           href="/freelancer/settings"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft className="size-3.5" />
           Back to settings
         </Link>
 
         <header className="space-y-2">
-          <h1 className="text-3xl font-bold text-gray-900">Payouts</h1>
-          <p className="text-gray-600">
-            Connect a Stripe account so clients' payments can reach you once work is released.
+          <h1 className="font-heading text-h1 font-semibold text-foreground">Payouts</h1>
+          <p className="text-muted-foreground">
+            Connect a Stripe account so clients&rsquo; payments can reach you once work is released.
           </p>
         </header>
 
         {cameBackFromStripe && state === 'loading' && (
-          <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800">
-            Checking your Stripe setup…
+          <div className="rounded-lg border border-primary/20 bg-primary-soft p-4 text-sm text-primary-hover">
+            Checking your Stripe setup&hellip;
           </div>
         )}
 
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <section className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-6">
+        <section className="space-y-6 rounded-xl border border-border bg-surface p-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <Landmark className="w-6 h-6 text-indigo-600" />
+            <div className="flex size-11 items-center justify-center rounded-lg bg-primary-soft">
+              <Landmark className="size-5 text-primary-hover" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Stripe account</h2>
-              <p className="text-sm text-gray-500">Stripe handles identity verification and bank details directly.</p>
+              <h2 className="font-heading text-h3 font-semibold text-foreground">Stripe account</h2>
+              <p className="text-sm text-muted-foreground">Stripe handles identity verification and bank details directly.</p>
             </div>
           </div>
 
           {state === 'loading' && (
-            <div className="flex items-center gap-2 text-sm text-gray-500 py-4">
-              <RefreshCw size={16} className="animate-spin" />
-              Loading payout status…
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <RefreshCw className="size-4 animate-spin" />
+              Loading payout status&hellip;
             </div>
           )}
 
           {state === 'unconfigured' && (
-            <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
-              <CircleAlert className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
-              <p className="text-sm text-amber-800">
+            <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-4">
+              <CircleAlert className="mt-0.5 size-5 shrink-0 text-warning" />
+              <p className="text-sm text-warning">
                 Payouts are not enabled on this environment yet. Check back once the platform has finished
                 setting up Stripe.
               </p>
@@ -159,11 +160,11 @@ function PayoutSettings() {
 
           {state === 'error' && (
             <div className="flex items-center justify-between py-4">
-              <p className="text-sm text-gray-500">Something went wrong loading your payout status.</p>
+              <p className="text-sm text-muted-foreground">Something went wrong loading your payout status.</p>
               <button
                 type="button"
                 onClick={fetchStatus}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 Try again
               </button>
@@ -173,26 +174,26 @@ function PayoutSettings() {
           {state === 'ready' && status && (
             <>
               {status.payouts_enabled ? (
-                <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-100">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-success/20 bg-success/10 p-4">
+                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-green-800">Payouts are active</p>
-                    <p className="text-xs text-green-700">
+                    <p className="text-sm font-medium text-success">Payouts are active</p>
+                    <p className="text-xs text-success">
                       Released payments will transfer to your connected account
                       {status.country ? ` (${status.country})` : ''}.
                     </p>
                   </div>
                 </div>
               ) : status.onboarded ? (
-                <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-lg border border-amber-100">
-                  <CircleAlert className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-4">
+                  <CircleAlert className="mt-0.5 size-5 shrink-0 text-warning" />
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-amber-800">Almost there</p>
-                    <p className="text-xs text-amber-700">
+                    <p className="text-sm font-medium text-warning">Almost there</p>
+                    <p className="text-xs text-warning">
                       Stripe needs a bit more information before payouts can start.
                     </p>
                     {requirementsDue.length > 0 && (
-                      <ul className="text-xs text-amber-700 list-disc list-inside pt-1">
+                      <ul className="list-inside list-disc pt-1 text-xs text-warning">
                         {requirementsDue.map((item) => (
                           <li key={item}>{item.replace(/_/g, ' ')}</li>
                         ))}
@@ -201,29 +202,24 @@ function PayoutSettings() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <CircleAlert className="w-5 h-5 text-gray-500 mt-0.5 shrink-0" />
-                  <p className="text-sm text-gray-600">
-                    You haven't connected a payout account yet. Clients can still book you, but a booking
-                    can't be paid until this is set up — the checkout page checks for it first.
+                <div className="flex items-start gap-3 rounded-lg border border-border bg-secondary p-4">
+                  <CircleAlert className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    You haven&apos;t connected a payout account yet. Clients can still book you, but a booking
+                    can&apos;t be paid until this is set up — the checkout page checks for it first.
                   </p>
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleConnect}
-                disabled={connecting}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
+              <Button onClick={handleConnect} disabled={connecting} className="w-full">
                 {connecting ? (
                   <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    Opening Stripe…
+                    <RefreshCw className="size-4 animate-spin" />
+                    Opening Stripe&hellip;
                   </>
                 ) : (
                   <>
-                    <ExternalLink size={16} />
+                    <ExternalLink className="size-4" />
                     {status.payouts_enabled
                       ? 'Update payout details'
                       : status.onboarded
@@ -231,7 +227,7 @@ function PayoutSettings() {
                         : 'Connect with Stripe'}
                   </>
                 )}
-              </button>
+              </Button>
             </>
           )}
         </section>

@@ -14,6 +14,7 @@ import { OrderSummary } from '@/components/payment/OrderSummary';
 import { PaymentProcessing } from '@/components/payment/PaymentProcessing';
 import { PaymentSuccess } from '@/components/payment/PaymentSuccess';
 import StripeCheckout from '@/components/payment/StripeCheckout';
+import { toMajorUnits } from '@/lib/currency';
 
 interface Service {
   service_id: string;
@@ -34,7 +35,8 @@ interface Package {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: number;
+  currency?: string;
   delivery_days: number;
   features: string[];
   revisions_included: number;
@@ -135,7 +137,7 @@ export default function PaymentPage() {
   // Calculate fees and totals
   const calculateSubtotal = (): number => {
     if (!selectedPackage) return 0;
-    const packagePrice = selectedPackage.price_e8s / 100000000; // Convert from e8s
+    const packagePrice = toMajorUnits(selectedPackage.price_minor, selectedPackage.currency);
     const upsellsTotal = selectedUpsells.reduce((sum, item) => sum + item.price, 0);
     return packagePrice + upsellsTotal;
   };
@@ -147,22 +149,12 @@ export default function PaymentPage() {
     return afterDiscount * freelancerFee;
   };
 
-  const TRANSFER_FEE_ICP = 0.0003; // Fixed transfer fee
-
   const calculateTotal = (): number => {
     const subtotal = calculateSubtotal();
     const discount = promoApplied ? subtotal * (promoApplied.discount / 100) : 0;
     const afterDiscount = subtotal - discount;
     const platformFee = calculatePlatformFee();
-    return afterDiscount + platformFee + TRANSFER_FEE_ICP;
-  };
-
-  const calculateTotalForEscrow = (): number => {
-    // Total amount the client pays
-    // This includes: package price + platform fee (4% or 3% based on plan) + transfer fee (0.0003 ICP)
-    // When released, escrow will deduct the platform fee (4% or 3%) and send the rest to the freelancer
-    // Round to 8 decimal places to match Order Summary display and avoid floating point precision issues
-    return parseFloat(calculateTotal().toFixed(8));
+    return afterDiscount + platformFee;
   };
 
   const handlePaymentSuccess = async (paymentData: any) => {
@@ -354,22 +346,11 @@ export default function PaymentPage() {
               />
             </div>
 
-            {/* Payment Widget - Commented out - no longer using ICPay SDK, only escrow */}
-            {/* <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="font-medium text-lg mb-4">
-            Payment Method (ICPay SDK)
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Pay securely with ICP tokens using the ICPay payment widget
-            (default flow – leave active while we integrate escrow)
-          </p>
-        </div> */}
-
-            {/* Escrow Payment via Plug */}
+            {/* Payment */}
             {service && selectedPackage && (
               <div className="bg-white rounded-lg border border-dashed border-purple-200 p-6">
                 <div className="mb-4">
-                  <h3 className="font-semibold text-lg mb-2">Escrow Payment (Plug Wallet)</h3>
+                  <h3 className="font-semibold text-lg mb-2">Payment</h3>
                   <p className="text-sm text-gray-600">
                     Your payment is held securely and only released to the freelancer once you approve the work.
                   </p>
@@ -395,13 +376,12 @@ export default function PaymentPage() {
           <div className="lg:col-span-1">
             <div className="sticky top-8 space-y-4">
               <OrderSummary
-                packagePrice={selectedPackage.price_e8s / 100000000}
+                packagePrice={toMajorUnits(selectedPackage.price_minor, selectedPackage.currency)}
                 upsells={selectedUpsells}
                 promoApplied={promoApplied}
                 total={calculateTotal()}
                 platformFee={calculatePlatformFee()}
                 platformFeeRate={freelancerFee}
-                transferFee={TRANSFER_FEE_ICP}
                 subtotal={calculateSubtotal()}
               />
 

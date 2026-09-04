@@ -1,6 +1,6 @@
 'use client'
 import React from 'react';
-import { Shield, AlertCircle, Wallet, Sparkles } from 'lucide-react';
+import { Shield, Sparkles } from 'lucide-react';
 
 interface UpsellItem {
   id: string;
@@ -20,7 +20,6 @@ interface OrderSummaryProps {
   total: number;
   platformFee?: number;
   platformFeeRate?: number; // Fee rate as decimal (e.g., 0.04 for 4%)
-  transferFee?: number;
   subtotal?: number;
 }
 
@@ -31,7 +30,6 @@ export function OrderSummary({
   total,
   platformFee: providedPlatformFee,
   platformFeeRate = 0.04, // Default to 4% for Basic plan
-  transferFee: providedTransferFee,
   subtotal: providedSubtotal
 }: OrderSummaryProps) {
   const upsellTotal = upsells.reduce((sum, upsell) => sum + upsell.price, 0);
@@ -39,7 +37,7 @@ export function OrderSummary({
   const discountAmount = promoApplied ? subtotal * (promoApplied.discount / 100) : 0;
   const afterDiscount = subtotal - discountAmount;
   const platformFee = providedPlatformFee ?? (afterDiscount * platformFeeRate);
-  const TRANSFER_FEE_ICP = providedTransferFee ?? 0.0003; // Corrected to 0.0003
+  const formatUSD = (value: number) => `$${value.toFixed(2)}`;
 
   return (
     <div className="bg-white rounded-xl border-2 border-purple-100 shadow-lg p-6">
@@ -56,7 +54,7 @@ export function OrderSummary({
       <div className="space-y-3 mb-4">
         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
           <span className="text-sm font-medium text-gray-700">Package Price</span>
-          <span className="text-lg font-bold text-gray-900">{packagePrice.toFixed(8)} ICP</span>
+          <span className="text-lg font-bold text-gray-900">{formatUSD(packagePrice)}</span>
         </div>
       </div>
 
@@ -71,7 +69,7 @@ export function OrderSummary({
             {upsells.map((upsell) => (
               <div key={upsell.id} className="flex items-center justify-between p-2 bg-purple-50 rounded-lg">
                 <span className="text-sm text-gray-700">{upsell.name}</span>
-                <span className="text-sm font-semibold text-purple-700">+{upsell.price.toFixed(8)} ICP</span>
+                <span className="text-sm font-semibold text-purple-700">+{formatUSD(upsell.price)}</span>
               </div>
             ))}
           </div>
@@ -83,7 +81,7 @@ export function OrderSummary({
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Subtotal</span>
-            <span className="font-medium text-gray-900">{subtotal.toFixed(8)} ICP</span>
+            <span className="font-medium text-gray-900">{formatUSD(subtotal)}</span>
           </div>
 
           {promoApplied && (
@@ -92,7 +90,7 @@ export function OrderSummary({
                 <span className="text-sm text-green-700 font-medium">Discount ({promoApplied.code})</span>
                 <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">-{promoApplied.discount}%</span>
               </div>
-              <span className="text-sm text-green-700 font-bold">-{discountAmount.toFixed(8)} ICP</span>
+              <span className="text-sm text-green-700 font-bold">-{formatUSD(discountAmount)}</span>
             </div>
           )}
 
@@ -114,12 +112,7 @@ export function OrderSummary({
                 </div>
               </div>
             </div>
-            <span className="font-medium text-gray-900">{platformFee.toFixed(8)} ICP</span>
-          </div>
-
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600">Network Transfer Fee</span>
-            <span className="font-medium text-gray-900">{TRANSFER_FEE_ICP.toFixed(8)} ICP</span>
+            <span className="font-medium text-gray-900">{formatUSD(platformFee)}</span>
           </div>
         </div>
       </div>
@@ -130,7 +123,7 @@ export function OrderSummary({
           <span className="text-lg font-bold text-gray-900">Total</span>
           <div className="text-right">
             <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-              {total.toFixed(8)} ICP
+              {formatUSD(total)}
             </div>
           </div>
         </div>
@@ -153,7 +146,7 @@ export function OrderSummary({
               </li>
               <li className="flex items-start space-x-2">
                 <span className="text-green-600 font-bold">✓</span>
-                <span>Blockchain-secured transactions</span>
+                <span>Processed securely by Stripe</span>
               </li>
             </ul>
           </div>

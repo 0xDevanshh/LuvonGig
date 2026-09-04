@@ -38,21 +38,21 @@ export default function ServicePreview() {
       basicTitle: basicPkg?.title || 'Basic Package',
       basicDescription: basicPkg?.description || service.whats_included,
       basicDeliveryDays: String(basicPkg?.delivery_days || service.delivery_time_days || '3'),
-      basicPrice: String(basicPkg?.price_e8s ? basicPkg.price_e8s / 100000000 : '99'),
+      basicPrice: String(basicPkg?.price_minor ? Number(basicPkg.price_minor) / 100 : '99'),
 
       advancedTitle: advancedPkg?.title || 'Standard Package',
       advancedDescription: advancedPkg?.description || 'Enhanced service package',
       advancedDeliveryDays: String(advancedPkg?.delivery_days || '5'),
-      advancedPrice: String(advancedPkg?.price_e8s ? advancedPkg.price_e8s / 100000000 : '199'),
+      advancedPrice: String(advancedPkg?.price_minor ? Number(advancedPkg.price_minor) / 100 : '199'),
 
       premiumTitle: premiumPkg?.title || 'Premium Package',
       premiumDescription: premiumPkg?.description || 'Priority service package',
       premiumDeliveryDays: String(premiumPkg?.delivery_days || '7'),
-      premiumPrice: String(premiumPkg?.price_e8s ? premiumPkg.price_e8s / 100000000 : '349'),
+      premiumPrice: String(premiumPkg?.price_minor ? Number(premiumPkg.price_minor) / 100 : '349'),
 
       packages: packages.map((pkg: any) => ({
         ...pkg,
-        price_e8s: Number(pkg.price_e8s),
+        price_minor: Number(pkg.price_minor),
         delivery_days: Number(pkg.delivery_days),
         revisions_included: Number(pkg.revisions_included || 0)
       })),

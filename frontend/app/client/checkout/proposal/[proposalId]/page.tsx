@@ -100,10 +100,8 @@ export default function ProposalCheckoutPage() {
         return calculateSubtotal() * freelancerFee;
     };
 
-    const TRANSFER_FEE_ICP = 0.0003;
-
     const calculateTotal = (): number => {
-        return calculateSubtotal() + calculatePlatformFee() + TRANSFER_FEE_ICP;
+        return calculateSubtotal() + calculatePlatformFee();
     };
 
     if (loading) {
@@ -141,7 +139,7 @@ export default function ProposalCheckoutPage() {
             paymentCompletedAt: currentTime,
             bookingConfirmedAt: currentTime,
             transactionId: paymentResult?.transactionId,
-            tokenSymbol: 'ICP',
+            tokenSymbol: 'USD',
             tokenAmount: calculateTotal().toString(),
         };
 
@@ -207,7 +205,7 @@ export default function ProposalCheckoutPage() {
 
                                     <div className="flex flex-wrap gap-4 text-sm">
                                         <div className="flex items-center gap-1.5 text-gray-500">
-                                            <span className="font-semibold text-gray-900">{(Number(proposal.bidAmount) / 100000000).toFixed(8)} ICP</span>
+                                            <span className="font-semibold text-gray-900">${(Number(proposal.bid_minor) / 100).toFixed(2)}</span>
                                             <span>Bid Amount</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 text-gray-500">
@@ -274,8 +272,7 @@ export default function ProposalCheckoutPage() {
                                 total={calculateTotal()}
                                 platformFee={calculatePlatformFee()}
                                 platformFeeRate={freelancerFee}
-                                transferFee={TRANSFER_FEE_ICP}
-                                subtotal={calculateSubtotal()}
+                                                subtotal={calculateSubtotal()}
                             />
 
                             {/* Trust Badges */}

@@ -10,7 +10,7 @@ export default function PaymentSuccess() {
   useEffect(() => {
     // Auto-redirect to requirements page after 5 seconds
     const timer = setTimeout(() => {
-      navigate.push('/submit-requirements');
+      navigate.push('/client/projects');
     }, 5000);
     return () => clearTimeout(timer);
   }, [navigate]);
@@ -67,7 +67,7 @@ export default function PaymentSuccess() {
             <Button variant="outline" size="lg" onClick={() => navigate.push('/client/browse-services')} className="flex-1">
               Browse More Services
             </Button>
-            <Button variant="default" size="lg" onClick={() => navigate.push('/submit-requirements')} className="flex-1 flex items-center justify-center">
+            <Button variant="default" size="lg" onClick={() => navigate.push('/client/projects')} className="flex-1 flex items-center justify-center">
               Submit Requirements
               <ArrowRight size={18} className="ml-2" />
             </Button>

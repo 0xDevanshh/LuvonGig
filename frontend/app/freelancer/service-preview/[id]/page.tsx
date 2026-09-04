@@ -424,7 +424,7 @@ export default function ServicePreviewPage({ }: ServicePreviewPageProps) {
                           <CardHeader>
                             <h3 className="text-lg font-semibold">{pkg.title}</h3>
                             <div className="text-2xl font-bold text-gray-900">
-                              ICP {parseFloat(pkg.price_e8s.toString()) / 100000000}
+                              ${(parseFloat(pkg.price_minor.toString()) / 100).toFixed(2)}
                             </div>
                             <div className="text-sm text-gray-600">
                               {pkg.delivery_timeline || `${pkg.delivery_days} days delivery`}

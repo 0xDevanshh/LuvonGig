@@ -4,24 +4,15 @@ import React from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
-  BarChart2,
-  Briefcase,
   MessageSquare,
   Calendar,
-  CheckCircle,
-  Clock,
   LayoutGrid,
   Search,
   User,
   Settings,
-  HelpCircle,
-  Bell,
-  Trophy, // Keep Trophy as it's used
-  Users, // Keep Users if it's used elsewhere, though not in the new import list
-  PlusCircle, // Keep PlusCircle as it's used
-  LogOut, // Keep LogOut as it's used
-  Coffee, // Keep Coffee as it's used
-  CreditCard, // Keep CreditCard as it's used
+  Trophy,
+  PlusCircle,
+  LogOut,
 } from 'lucide-react'
 
 export function ClientSidebar() {

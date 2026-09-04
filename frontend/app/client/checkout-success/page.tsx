@@ -52,7 +52,7 @@ export default function CheckoutSuccess() {
           <button onClick={() => navigate.push('/client/browse-services')} className="flex-1 py-3 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             Browse More Services
           </button>
-          <button onClick={() => navigate.push('/submit-requirements')} className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+          <button onClick={() => navigate.push('/client/projects')} className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
             Submit Requirements
             <ArrowRight size={18} className="ml-2" />
           </button>

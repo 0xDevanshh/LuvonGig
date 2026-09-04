@@ -327,7 +327,7 @@ export default function ServiceDetails() {
     tiers: service.packages ? service.packages.reduce((acc: any, pkg: any) => {
       acc[pkg.tier.toLowerCase()] = {
         name: pkg.tier,
-        price: pkg.price_e8s / 100000000, // Convert from e8s to ICP
+        price: pkg.price_minor / 100,
         description: pkg.description,
         deliveryDays: pkg.delivery_days,
         deliveryTimeline: pkg.delivery_timeline || `${pkg.delivery_days} days`,
@@ -629,7 +629,7 @@ export default function ServiceDetails() {
                       </div>
                       <div className="font-bold">
                         ${similar.packages && similar.packages.length > 0
-                          ? Math.min(...similar.packages.map((p: any) => p.price_e8s / 100000000)).toFixed(2)
+                          ? Math.min(...similar.packages.map((p: any) => p.price_minor / 100)).toFixed(2)
                           : '0.00'
                         }
                       </div>
@@ -667,7 +667,7 @@ export default function ServiceDetails() {
               {service.packages && service.packages.length > 0 ? (
                 service.packages.map((pkg: any) => {
                   const tierName = pkg.tier.toLowerCase();
-                  const price = pkg.price_e8s / 100000000;
+                  const price = pkg.price_minor / 100;
                   return (
                     <button
                       key={pkg.package_id}

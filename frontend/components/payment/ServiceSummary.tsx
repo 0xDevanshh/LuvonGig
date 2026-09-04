@@ -1,6 +1,7 @@
 'use client'
 import React from 'react';
 import { Star, Clock, User, Image as ImageIcon } from 'lucide-react';
+import { formatMoney } from '@/lib/currency';
 
 interface Service {
   service_id: string;
@@ -19,7 +20,8 @@ interface Package {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: number;
+  currency?: string;
   delivery_days: number;
   features: string[];
   revisions_included: number;
@@ -38,7 +40,7 @@ export function ServiceSummary({
   specialInstructions,
   onInstructionsChange
 }: ServiceSummaryProps) {
-  const price = selectedPackage.price_e8s / 100000000; // Convert from e8s to ICP
+  const priceLabel = formatMoney(selectedPackage.price_minor, selectedPackage.currency);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -95,9 +97,8 @@ export function ServiceSummary({
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-purple-900">
-                ${price < 0.01 && price > 0 ? price.toFixed(4) : price.toFixed(2)}
+                {priceLabel}
               </div>
-              <div className="text-sm text-purple-700">ICP {price.toFixed(4)}</div>
             </div>
           </div>
 

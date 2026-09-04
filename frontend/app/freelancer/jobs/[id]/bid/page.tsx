@@ -5,8 +5,11 @@ import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     ArrowLeft,
     Send,
@@ -22,6 +25,7 @@ import { getJob } from '@/lib/api/jobs'
 import { useUserContext } from '@/contexts/UserContext'
 import { getUserProfileByEmail } from '@/lib/user-profile'
 import { useToast } from '@/contexts/ToastContext'
+import { formatMoney, toMinorUnits } from '@/lib/currency'
 
 export default function BidSubmissionPage() {
     const router = useRouter()
@@ -43,9 +47,6 @@ export default function BidSubmissionPage() {
     useEffect(() => {
         const fetchJob = async () => {
             try {
-                // The API returns the job directly. Candid wrapped an
-                // optional as a one-or-zero element array, hence the old
-                // `result.length > 0 ? result[0]` unwrapping.
                 setJob(await getJob(jobId as string))
             } catch (error) {
                 console.error('Error fetching job details:', error)
@@ -84,7 +85,6 @@ export default function BidSubmissionPage() {
             return
         }
 
-        // Pre-submission connects check for better UX
         const CONNECTS_PER_BID = 2
         if (usage && usage.connects < CONNECTS_PER_BID) {
             showToast(`You have 0 connects left! You need at least ${CONNECTS_PER_BID} connects to place a bid. Please buy more connects in your subscription settings.`, 'warning', 8000)
@@ -103,7 +103,7 @@ export default function BidSubmissionPage() {
                     email: profile.email,
                     freelancerId,
                     coverLetter: formData.coverLetter,
-                    bidAmount: formData.bidAmount,
+                    bid_minor: toMinorUnits(formData.bidAmount),
                     deliveryDays: formData.deliveryDays
                 })
             })
@@ -130,177 +130,170 @@ export default function BidSubmissionPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+            <div className="p-6">
+                <Skeleton className="mb-6 h-8 w-48" />
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                    <Skeleton className="h-64 lg:col-span-1" />
+                    <Skeleton className="h-96 lg:col-span-2" />
+                </div>
             </div>
         )
     }
 
     if (!job) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-                <h2 className="text-2xl font-bold mb-2">Job Not Found</h2>
-                <Button onClick={() => router.push('/freelancer/browse-jobs')}>Back to Browse</Button>
+            <div className="flex min-h-[60vh] items-center justify-center p-6">
+                <EmptyState
+                    icon={AlertCircle}
+                    title="Job not found"
+                    action={<Button onClick={() => router.push('/freelancer/browse-jobs')}>Back to browse</Button>}
+                />
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="max-w-4xl mx-auto px-4 py-8">
-                <button
-                    onClick={() => router.back()}
-                    className="flex items-center text-gray-600 hover:text-blue-600 mb-8 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Job Details
-                </button>
+        <div className="p-6 pb-20">
+            <button
+                onClick={() => router.back()}
+                className="mb-8 flex items-center text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
+                <ArrowLeft className="mr-2 size-4" />
+                Back to job details
+            </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Job Summary */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <Card className="border-purple-100 bg-purple-50/30">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center text-purple-800">
-                                    <Activity className="w-4 h-4 mr-2" />
-                                    Your Balance
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-2xl font-bold text-purple-700">
-                                        {usage ? usage.connects : '--'}
-                                    </span>
-                                    <Badge variant="outline" className="text-purple-600 border-purple-200">
-                                        Connects
-                                    </Badge>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                <div className="space-y-6 lg:col-span-1">
+                    <Card className="border-primary/20 bg-primary-soft">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="flex items-center text-sm text-primary-hover">
+                                <Activity className="mr-2 size-4" />
+                                Your balance
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <span className="text-2xl font-bold text-primary-hover">
+                                    {usage ? usage.connects : '--'}
+                                </span>
+                                <Badge variant="outline">Connects</Badge>
+                            </div>
+                            <p className="mt-2 text-[10px] text-primary-hover">
+                                This bid will use 2 connects.
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center text-base">
+                                <Briefcase className="mr-2 size-4 text-primary" />
+                                Job summary
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div>
+                                <h3 className="font-semibold text-foreground">{job.title}</h3>
+                                <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{job.description}</p>
+                            </div>
+                            <div className="border-t border-border pt-4">
+                                <div className="mb-2 flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Client:</span>
+                                    <span className="font-medium text-foreground">{job.client_name || job.clientId.slice(0, 8)}</span>
                                 </div>
-                                <p className="text-[10px] text-purple-600 mt-2">
-                                    This bid will use 2 connects.
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-blue-100 bg-blue-50/30">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center text-blue-800">
-                                    <Briefcase className="w-4 h-4 mr-2" />
-                                    Job Summary
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <h3 className="font-bold text-gray-900">{job.title}</h3>
-                                    <p className="text-sm text-gray-600 mt-2 line-clamp-4">{job.description}</p>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Budget:</span>
+                                    <span className="font-semibold text-success">{formatMoney(job.budget_minor, job.currency)}</span>
                                 </div>
-                                <div className="pt-4 border-t border-blue-100">
-                                    <div className="flex justify-between text-sm mb-2">
-                                        <span className="text-gray-500">Client ID:</span>
-                                        <span className="font-medium">{job.clientId.slice(0, 8)}...</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-500">Budget:</span>
-                                        <span className="font-bold text-green-600">{(Number(job.budgetAmount) / 100000000).toFixed(5)} ICP</span>
-                                    </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardContent className="flex items-start gap-3 pt-6">
+                            <AlertCircle className="mt-0.5 size-5 shrink-0 text-warning" />
+                            <p className="text-xs text-muted-foreground">
+                                Submit a compelling proposal to increase your chances. Be clear about your value and timeline.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="lg:col-span-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center">
+                                <FileText className="mr-2 size-5 text-primary" />
+                                Submit your proposal
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="flex flex-col gap-1.5">
+                                    <Label htmlFor="coverLetter">Cover letter — why should they hire you?</Label>
+                                    <Textarea
+                                        id="coverLetter"
+                                        placeholder="Explain your approach, relevant experience, and why you're the best fit for this project..."
+                                        className="min-h-[250px] resize-none"
+                                        value={formData.coverLetter}
+                                        onChange={(e) => setFormData((prev) => ({ ...prev, coverLetter: e.target.value }))}
+                                        required
+                                    />
                                 </div>
-                            </CardContent>
-                        </Card>
 
-                        <Card>
-                            <CardContent className="p-4 flex items-start gap-3">
-                                <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-gray-600">
-                                    Submit a compelling proposal to increase your chances. Be clear about your value and timeline.
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Proposal Form */}
-                    <div className="lg:col-span-2">
-                        <Card className="shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <FileText className="w-5 h-5 mr-2 text-blue-600" />
-                                    Submit Your Proposal
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleSubmit} className="space-y-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Cover Letter / Why should they hire you?
-                                        </label>
-                                        <Textarea
-                                            placeholder="Explain your approach, relevant experience, and why you're the best fit for this project..."
-                                            className="min-h-[250px] resize-none"
-                                            value={formData.coverLetter}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, coverLetter: e.target.value }))}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Bid Amount (ICP)
-                                            </label>
-                                            <div className="relative">
-                                                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                                <Input
-                                                    type="number"
-                                                    step="0.00001"
-                                                    placeholder="e.g. 50.00001"
-                                                    className="pl-10"
-                                                    value={formData.bidAmount}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, bidAmount: e.target.value }))}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Estimated Delivery (Days)
-                                            </label>
-                                            <div className="relative">
-                                                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                                <Input
-                                                    type="number"
-                                                    placeholder="e.g. 7"
-                                                    className="pl-10"
-                                                    value={formData.deliveryDays}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, deliveryDays: e.target.value }))}
-                                                    required
-                                                />
-                                            </div>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label htmlFor="bidAmount">Bid amount (USD)</Label>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                id="bidAmount"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                placeholder="e.g. 50.00"
+                                                className="pl-9"
+                                                value={formData.bidAmount}
+                                                onChange={(e) => setFormData((prev) => ({ ...prev, bidAmount: e.target.value }))}
+                                                required
+                                            />
                                         </div>
                                     </div>
 
-                                    <div className="pt-4">
-                                        <Button
-                                            type="submit"
-                                            className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting ? (
-                                                <>
-                                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                    Submitting...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Send className="w-5 h-5 mr-2" />
-                                                    Place Bid
-                                                </>
-                                            )}
-                                        </Button>
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label htmlFor="deliveryDays">Estimated delivery (days)</Label>
+                                        <div className="relative">
+                                            <Clock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                id="deliveryDays"
+                                                type="number"
+                                                min="1"
+                                                placeholder="e.g. 7"
+                                                className="pl-9"
+                                                value={formData.deliveryDays}
+                                                onChange={(e) => setFormData((prev) => ({ ...prev, deliveryDays: e.target.value }))}
+                                                required
+                                            />
+                                        </div>
                                     </div>
-                                </form>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                </div>
+
+                                <Button type="submit" className="h-12 w-full text-base" disabled={isSubmitting}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="size-5 animate-spin" />
+                                            Submitting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="size-5" />
+                                            Place bid
+                                        </>
+                                    )}
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </div>

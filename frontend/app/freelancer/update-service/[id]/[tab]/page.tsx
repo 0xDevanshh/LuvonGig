@@ -36,7 +36,6 @@ export default function UpdateService() {
     cover_image_url: formData.coverImage,
     portfolio_images: formData.portfolioImages,
     delivery_time_days: Number(formData.basicDeliveryDays || 7),
-    starting_from_e8s: Number(formData.basicPrice || 0) * 100000000,
     tier_mode: formData.tierMode,
     tags: formData.tags || [],
     client_questions: formData.clientQuestions,
@@ -123,19 +122,19 @@ export default function UpdateService() {
       basicTitle: basicPkg?.title || 'Basic Package',
       basicDescription: basicPkg?.description || service.whats_included,
       basicDeliveryDays: String(basicPkg?.delivery_days || service.delivery_time_days || '3'),
-      basicPrice: String(basicPkg?.price_e8s ? basicPkg.price_e8s / 100000000 : '99'),
+      basicPrice: String(basicPkg?.price_minor ? Number(basicPkg.price_minor) / 100 : '99'),
 
       // Advanced Tier
       advancedTitle: advancedPkg?.title || 'Standard Package',
       advancedDescription: advancedPkg?.description || 'Enhanced service with additional features',
       advancedDeliveryDays: String(advancedPkg?.delivery_days || '5'),
-      advancedPrice: String(advancedPkg?.price_e8s ? advancedPkg.price_e8s / 100000000 : '199'),
+      advancedPrice: String(advancedPkg?.price_minor ? Number(advancedPkg.price_minor) / 100 : '199'),
 
       // Premium Tier
       premiumTitle: premiumPkg?.title || 'Premium Package',
       premiumDescription: premiumPkg?.description || 'Complete service with all features and priority support',
       premiumDeliveryDays: String(premiumPkg?.delivery_days || '7'),
-      premiumPrice: String(premiumPkg?.price_e8s ? premiumPkg.price_e8s / 100000000 : '349'),
+      premiumPrice: String(premiumPkg?.price_minor ? Number(premiumPkg.price_minor) / 100 : '349'),
 
       clientQuestions: service.client_questions || [
         { id: '1', type: 'text', question: 'What is the primary goal of your project?', required: true },
@@ -227,7 +226,7 @@ export default function UpdateService() {
               ...pkg,
               title: formData.basicTitle || pkg.title,
               description: formData.basicDescription || pkg.description,
-              price_e8s: formData.basicPrice ? Math.round(Number(formData.basicPrice) * 100000000) : pkg.price_e8s,
+              price_minor: formData.basicPrice ? Math.round(Number(formData.basicPrice) * 100) : pkg.price_minor,
               delivery_days: formData.basicDeliveryDays ? Number(formData.basicDeliveryDays) : pkg.delivery_days
             };
           }
@@ -236,7 +235,7 @@ export default function UpdateService() {
               ...pkg,
               title: formData.advancedTitle || pkg.title,
               description: formData.advancedDescription || pkg.description,
-              price_e8s: formData.advancedPrice ? Math.round(Number(formData.advancedPrice) * 100000000) : pkg.price_e8s,
+              price_minor: formData.advancedPrice ? Math.round(Number(formData.advancedPrice) * 100) : pkg.price_minor,
               delivery_days: formData.advancedDeliveryDays ? Number(formData.advancedDeliveryDays) : pkg.delivery_days
             };
           }
@@ -245,7 +244,7 @@ export default function UpdateService() {
               ...pkg,
               title: formData.premiumTitle || pkg.title,
               description: formData.premiumDescription || pkg.description,
-              price_e8s: formData.premiumPrice ? Math.round(Number(formData.premiumPrice) * 100000000) : pkg.price_e8s,
+              price_minor: formData.premiumPrice ? Math.round(Number(formData.premiumPrice) * 100) : pkg.price_minor,
               delivery_days: formData.premiumDeliveryDays ? Number(formData.premiumDeliveryDays) : pkg.delivery_days
             };
           }
@@ -266,13 +265,13 @@ export default function UpdateService() {
                 body: JSON.stringify({
                   userId,
                   updates: {
-                    title: pkg.title,
+                    name: pkg.title,
                     description: pkg.description,
-                    price_e8s: Number(pkg.price_e8s),
-                    delivery_days: Number(pkg.delivery_days),
+                    price_minor: Number(pkg.price_minor),
+                    delivery_time_days: Number(pkg.delivery_days),
                     delivery_timeline: pkg.delivery_timeline,
                     features: pkg.features,
-                    revisions_included: Number(pkg.revisions_included)
+                    revisions: Number(pkg.revisions_included)
                   }
                 })
               });

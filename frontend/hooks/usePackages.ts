@@ -8,7 +8,7 @@ export interface Package {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: number;
   delivery_days: number;
   features: string[];
   revisions_included: number;
@@ -22,7 +22,7 @@ export interface CreatePackageData {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: number;
   delivery_days: number;
   features?: string[];
   revisions_included?: number;
@@ -33,7 +33,7 @@ export interface UpdatePackageData {
   tier?: string;
   title?: string;
   description?: string;
-  price_e8s?: number;
+  price_minor?: number;
   delivery_days?: number;
   features?: string[];
   revisions_included?: number;

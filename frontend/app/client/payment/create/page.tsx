@@ -21,7 +21,7 @@ interface Package {
   tier: string;
   title: string;
   description: string;
-  price_e8s: number;
+  price_minor: number;
   delivery_days: number;
   features: string[];
   revisions_included: number;
@@ -151,7 +151,7 @@ function PaymentCreateContent() {
               <p className="text-gray-600 text-sm mb-3">{selectedPackage.description}</p>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold text-purple-600">
-                  ${(selectedPackage.price_e8s / 100000000).toFixed(2)}
+                  ${(selectedPackage.price_minor / 100).toFixed(2)}
                 </span>
                 <span className="text-sm text-gray-500">
                   📅 {selectedPackage.delivery_days} days delivery

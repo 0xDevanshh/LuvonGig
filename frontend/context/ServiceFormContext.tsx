@@ -37,7 +37,7 @@ interface ServiceFormData {
     tier: string;
     title: string;
     description: string;
-    price_e8s: number;
+    price_minor: number;
     delivery_days: number;
     delivery_timeline: string;
     features: string[];
@@ -365,33 +365,33 @@ export const ServiceFormProvider: React.FC<{
           if (formData.basicTitle && formData.basicPrice) {
             const deliveryDays = parseInt(formData.basicDeliveryDays) || 1;
             packages.push({
-              package_id: `package-${Date.now()}-basic`,
-              tier: 'Basic',
-              title: formData.basicTitle,
+              tier: 'basic',
+              name: formData.basicTitle,
               description: formData.basicDescription || 'Basic package service',
-              price_e8s: Math.round(parseFloat(formData.basicPrice) * 100000000),
-              delivery_days: deliveryDays,
+              price_minor: Math.round(parseFloat(formData.basicPrice) * 100),
+              currency: 'USD',
+              delivery_time_days: deliveryDays,
               delivery_timeline: getTimelineDescription(deliveryDays),
               features: [],
-              revisions_included: 1,
-              status: 'Available'
+              revisions: 1,
+              is_active: true
             });
           }
 
-          // Create Advanced package
+          // Create Standard package
           if (formData.advancedTitle && formData.advancedPrice) {
             const deliveryDays = parseInt(formData.advancedDeliveryDays) || 3;
             packages.push({
-              package_id: `package-${Date.now()}-advanced`,
-              tier: 'Advanced',
-              title: formData.advancedTitle,
+              tier: 'standard',
+              name: formData.advancedTitle,
               description: formData.advancedDescription || 'Advanced package service',
-              price_e8s: Math.round(parseFloat(formData.advancedPrice) * 100000000),
-              delivery_days: deliveryDays,
+              price_minor: Math.round(parseFloat(formData.advancedPrice) * 100),
+              currency: 'USD',
+              delivery_time_days: deliveryDays,
               delivery_timeline: getTimelineDescription(deliveryDays),
               features: [],
-              revisions_included: 2,
-              status: 'Available'
+              revisions: 2,
+              is_active: true
             });
           }
 
@@ -399,16 +399,16 @@ export const ServiceFormProvider: React.FC<{
           if (formData.premiumTitle && formData.premiumPrice) {
             const deliveryDays = parseInt(formData.premiumDeliveryDays) || 7;
             packages.push({
-              package_id: `package-${Date.now()}-premium`,
-              tier: 'Premium',
-              title: formData.premiumTitle,
+              tier: 'premium',
+              name: formData.premiumTitle,
               description: formData.premiumDescription || 'Premium package service',
-              price_e8s: Math.round(parseFloat(formData.premiumPrice) * 100000000),
-              delivery_days: deliveryDays,
+              price_minor: Math.round(parseFloat(formData.premiumPrice) * 100),
+              currency: 'USD',
+              delivery_time_days: deliveryDays,
               delivery_timeline: getTimelineDescription(deliveryDays),
               features: [],
-              revisions_included: 3,
-              status: 'Available'
+              revisions: 3,
+              is_active: true
             });
           }
         } else {
@@ -416,16 +416,16 @@ export const ServiceFormProvider: React.FC<{
           if (formData.basicTitle && formData.basicPrice) {
             const deliveryDays = parseInt(formData.basicDeliveryDays) || 1;
             packages.push({
-              package_id: `package-${Date.now()}-single`,
-              tier: 'Basic',
-              title: formData.basicTitle || 'Service Package',
+              tier: 'basic',
+              name: formData.basicTitle || 'Service Package',
               description: formData.basicDescription || 'Professional service offering',
-              price_e8s: Math.round(parseFloat(formData.basicPrice) * 100000000),
-              delivery_days: deliveryDays,
+              price_minor: Math.round(parseFloat(formData.basicPrice) * 100),
+              currency: 'USD',
+              delivery_time_days: deliveryDays,
               delivery_timeline: getTimelineDescription(deliveryDays),
               features: [],
-              revisions_included: 1,
-              status: 'Available'
+              revisions: 1,
+              is_active: true
             });
           }
         }
