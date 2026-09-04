@@ -477,6 +477,12 @@ export default function MyServices() {
     navigate.push(`/freelancer/service-preview/${serviceId}`)
   }
   const handleDeleteService = async (serviceId: string) => {
+    if (!userEmail) {
+      console.error('❌ Cannot delete service: userEmail is not available');
+      alert('Failed to delete service: User email not found. Please log in again.');
+      return;
+    }
+
     if (
       confirm(
         'Are you sure you want to delete this service? This action cannot be undone.',
@@ -485,16 +491,7 @@ export default function MyServices() {
       console.log('🗑️ Delete Service - Initiating deletion for service:', serviceId);
 
       try {
-        // Make API call to delete from canister
-        // The API will automatically get user info from the session
-        const response = await fetch(`/api/marketplace/services/${serviceId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-
-        const result = await response.json()
+        const result = await deleteService(userEmail, serviceId)
         console.log('📡 Delete Service - API Response:', result);
 
         if (result.success) {
