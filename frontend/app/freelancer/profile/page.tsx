@@ -1,8 +1,16 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react'
-import { User, Mail, Phone, MapPin, Award, Edit3, Camera, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Award, Edit3, Camera, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useUserContext } from '@/contexts/UserContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function FreelancerProfilePage() {
     const { profile, isLoading: profileLoading } = useUserProfile()
@@ -11,7 +19,6 @@ export default function FreelancerProfilePage() {
     const [saveLoading, setSaveLoading] = useState(false)
     const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-    // Initialize profile data with real user data
     const [profileData, setProfileData] = useState({
         fullName: '',
         email: '',
@@ -37,7 +44,6 @@ export default function FreelancerProfilePage() {
     })
     const [statsLoading, setStatsLoading] = useState(true)
 
-    // Update profile data when user profile loads
     useEffect(() => {
         if (profile.isLoaded && !profileLoading) {
             const newProfileData = {
@@ -57,7 +63,6 @@ export default function FreelancerProfilePage() {
         }
     }, [profile, profileLoading])
 
-    // Load hackathon stats (common for both roles)
     useEffect(() => {
         const loadHackathonStats = async () => {
             if (!profile.email) return;
@@ -88,7 +93,6 @@ export default function FreelancerProfilePage() {
         setSaveMessage(null)
 
         try {
-            // Split full name into first and last name
             const nameParts = editData.fullName.trim().split(' ')
             const firstName = nameParts[0] || ''
             const lastName = nameParts.slice(1).join(' ') || ''
@@ -124,8 +128,6 @@ export default function FreelancerProfilePage() {
                     type: 'success',
                     text: result.message || 'Profile updated successfully!'
                 })
-
-                // Refresh user context to update profile across the app
                 await refreshProfile()
             } else {
                 setSaveMessage({
@@ -141,8 +143,6 @@ export default function FreelancerProfilePage() {
             })
         } finally {
             setSaveLoading(false)
-
-            // Clear message after 5 seconds
             setTimeout(() => setSaveMessage(null), 5000)
         }
     }
@@ -155,99 +155,61 @@ export default function FreelancerProfilePage() {
 
     const addSkill = (skill: string) => {
         if (skill && !editData.skills.includes(skill)) {
-            setEditData({
-                ...editData,
-                skills: [...editData.skills, skill]
-            })
+            setEditData({ ...editData, skills: [...editData.skills, skill] })
         }
     }
 
     const removeSkill = (skillToRemove: string) => {
-        setEditData({
-            ...editData,
-            skills: editData.skills.filter(skill => skill !== skillToRemove)
-        })
+        setEditData({ ...editData, skills: editData.skills.filter((skill) => skill !== skillToRemove) })
     }
 
-    // Show loading state while profile is loading
     if (profileLoading) {
         return (
-            <div className="max-w-4xl mx-auto space-y-6 p-6 md:p-8">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div className="animate-pulse space-y-4">
-                        <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                        <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 bg-gray-200 rounded-full"></div>
-                            <div className="space-y-2">
-                                <div className="h-6 bg-gray-200 rounded w-48"></div>
-                                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                                <div className="space-y-2">
-                                    <div className="h-10 bg-gray-200 rounded"></div>
-                                    <div className="h-10 bg-gray-200 rounded"></div>
-                                    <div className="h-10 bg-gray-200 rounded"></div>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="h-4 bg-gray-200 rounded w-16"></div>
-                                <div className="space-y-2">
-                                    <div className="h-20 bg-gray-200 rounded"></div>
-                                    <div className="h-10 bg-gray-200 rounded"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-4xl space-y-6 p-6 md:p-8">
+                <Skeleton className="h-64" />
             </div>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 p-6 md:p-8">
-            {/* Save Message Notification */}
+        <div className="mx-auto max-w-4xl space-y-6 p-6 md:p-8">
+            <PageHeader title="Profile" description="Manage how clients see you across LuvonGig." />
+
             {saveMessage && (
                 <div
-                    className={`rounded-lg p-4 flex items-center gap-3 ${saveMessage.type === 'success'
-                            ? 'bg-green-50 border border-green-200 text-green-800'
-                            : 'bg-red-50 border border-red-200 text-red-800'
+                    className={`flex items-center gap-3 rounded-lg border p-4 text-sm ${saveMessage.type === 'success'
+                        ? 'border-success/20 bg-success/10 text-success'
+                        : 'border-destructive/20 bg-destructive/10 text-destructive'
                         }`}
                 >
                     {saveMessage.type === 'success' ? (
-                        <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                        <CheckCircle className="size-5 shrink-0" />
                     ) : (
-                        <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                        <AlertCircle className="size-5 shrink-0" />
                     )}
                     <span>{saveMessage.text}</span>
                 </div>
             )}
-            {/* Profile Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Freelancer Profile</h2>
-                    <button
-                        onClick={() => setIsEditing(!isEditing)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
+
+            <Card className="p-6">
+                <div className="mb-6 flex items-center justify-between">
+                    <h2 className="font-heading text-h2 font-semibold text-foreground">Freelancer profile</h2>
+                    <Button variant={isEditing ? 'outline' : 'default'} onClick={() => setIsEditing(!isEditing)}>
                         {isEditing ? (
                             <>
-                                <X className="w-4 h-4" />
+                                <X className="size-4" />
                                 Cancel
                             </>
                         ) : (
                             <>
-                                <Edit3 className="w-4 h-4" />
-                                Edit Profile
+                                <Edit3 className="size-4" />
+                                Edit profile
                             </>
                         )}
-                    </button>
+                    </Button>
                 </div>
 
-                {/* Profile Picture */}
-                <div className="flex items-center gap-6 mb-6">
+                <div className="mb-6 flex items-center gap-6">
                     <div className="relative">
                         <img
                             src={
@@ -256,7 +218,7 @@ export default function FreelancerProfilePage() {
                                 '/assets/default-avatar.png'
                             }
                             alt="Profile"
-                            className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 shadow-md"
+                            className="size-24 rounded-full border-4 border-background object-cover shadow-sm"
                         />
                         {isEditing && (
                             <>
@@ -270,10 +232,7 @@ export default function FreelancerProfilePage() {
                                         if (!file) return
 
                                         if (file.size > 5 * 1024 * 1024) {
-                                            setSaveMessage({
-                                                type: 'error',
-                                                text: 'File too large. Maximum size is 5MB.',
-                                            })
+                                            setSaveMessage({ type: 'error', text: 'File too large. Maximum size is 5MB.' })
                                             return
                                         }
 
@@ -299,20 +258,11 @@ export default function FreelancerProfilePage() {
                                                 throw new Error(uploadResult.error || 'Failed to upload image')
                                             }
 
-                                            setEditData((prev) => ({
-                                                ...prev,
-                                                profileImage: uploadResult.fileUrl,
-                                            }))
-                                            setSaveMessage({
-                                                type: 'success',
-                                                text: 'Profile photo uploaded. Click save to apply.',
-                                            })
+                                            setEditData((prev) => ({ ...prev, profileImage: uploadResult.fileUrl }))
+                                            setSaveMessage({ type: 'success', text: 'Profile photo uploaded. Click save to apply.' })
                                         } catch (uploadError: any) {
                                             console.error('Profile image upload error:', uploadError)
-                                            setSaveMessage({
-                                                type: 'error',
-                                                text: uploadError?.message || 'Failed to upload profile image.',
-                                            })
+                                            setSaveMessage({ type: 'error', text: uploadError?.message || 'Failed to upload profile image.' })
                                             setProfileImagePreview(null)
                                         } finally {
                                             setUploadingImage(false)
@@ -320,109 +270,97 @@ export default function FreelancerProfilePage() {
                                         }
                                     }}
                                 />
-                                <button
+                                <Button
                                     type="button"
+                                    size="icon-sm"
+                                    className="absolute bottom-0 right-0 rounded-full"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="absolute bottom-0 right-0 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors shadow-lg disabled:opacity-50"
                                     disabled={uploadingImage}
                                 >
                                     {uploadingImage ? (
-                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        <div className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                     ) : (
-                                        <Camera className="w-4 h-4" />
+                                        <Camera className="size-4" />
                                     )}
-                                </button>
+                                </Button>
                             </>
                         )}
                     </div>
                     <div>
-                        <h3 className="text-xl font-bold text-gray-900">{profileData.fullName}</h3>
-                        <p className="text-gray-500 font-medium capitalize">{profile.designation || 'Freelancer'}</p>
-                        <p className="text-gray-400 text-sm">{profile.email}</p>
+                        <h3 className="font-heading text-h3 font-semibold text-foreground">{profileData.fullName}</h3>
+                        <p className="font-medium capitalize text-muted-foreground">{profile.designation || 'Freelancer'}</p>
+                        <p className="text-sm text-muted-foreground">{profile.email}</p>
                     </div>
                 </div>
 
-                {/* Profile Form */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Personal Information */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="space-y-4">
-                        <h4 className="font-semibold text-gray-900 border-b pb-2">Personal Information</h4>
+                        <h4 className="border-b border-border pb-2 font-medium text-foreground">Personal information</h4>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                            <input
-                                type="text"
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="fullName">Full name</Label>
+                            <Input
+                                id="fullName"
                                 value={isEditing ? editData.fullName : profileData.fullName}
                                 onChange={(e) => setEditData({ ...editData, fullName: e.target.value })}
                                 disabled={!isEditing}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input
-                                type="email"
-                                value={profileData.email}
-                                disabled
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
-                            />
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="email">Email</Label>
+                            <Input id="email" type="email" value={profileData.email} disabled />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                            <input
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                                id="phone"
                                 type="tel"
                                 value={isEditing ? editData.phone : profileData.phone}
                                 onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
                                 disabled={!isEditing}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                            <input
-                                type="text"
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="location">Location</Label>
+                            <Input
+                                id="location"
                                 value={isEditing ? editData.location : profileData.location}
                                 onChange={(e) => setEditData({ ...editData, location: e.target.value })}
                                 disabled={!isEditing}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                             />
                         </div>
                     </div>
 
-                    {/* Bio & Skills */}
                     <div className="space-y-4">
-                        <h4 className="font-semibold text-gray-900 border-b pb-2">Professional Details</h4>
+                        <h4 className="border-b border-border pb-2 font-medium text-foreground">Professional details</h4>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Professional Bio</label>
-                            <textarea
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="bio">Professional bio</Label>
+                            <Textarea
+                                id="bio"
                                 value={isEditing ? editData.bio : profileData.bio}
                                 onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
                                 disabled={!isEditing}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 resize-none"
                                 placeholder="Describe your skills and experience..."
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Skills</label>
+                        <div className="flex flex-col gap-1.5">
+                            <Label>Skills</Label>
                             <div className="flex flex-wrap gap-2">
                                 {(isEditing ? editData.skills : profileData.skills).map((skill) => (
-                                    <span
-                                        key={skill}
-                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-sm font-medium"
-                                    >
+                                    <Badge key={skill} variant="secondary" className="gap-1">
                                         {skill}
                                         {isEditing && (
-                                            <button onClick={() => removeSkill(skill)} className="ml-1 hover:text-blue-900">
-                                                <X className="w-3 h-3" />
+                                            <button onClick={() => removeSkill(skill)} aria-label={`Remove ${skill}`}>
+                                                <X className="size-3" />
                                             </button>
                                         )}
-                                    </span>
+                                    </Badge>
                                 ))}
                                 {isEditing && (
                                     <button
@@ -430,7 +368,7 @@ export default function FreelancerProfilePage() {
                                             const newSkill = prompt('Add a new skill:');
                                             if (newSkill) addSkill(newSkill);
                                         }}
-                                        className="px-3 py-1 border-2 border-dashed border-blue-300 text-blue-600 rounded-full text-sm hover:border-blue-500 hover:text-blue-700 transition-colors"
+                                        className="rounded-full border border-dashed border-primary/40 px-3 py-1 text-sm text-primary transition-colors hover:border-primary"
                                     >
                                         + Add
                                     </button>
@@ -438,129 +376,120 @@ export default function FreelancerProfilePage() {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">GitHub Profile</label>
-                            <input
-                                type="text"
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="github">GitHub profile</Label>
+                            <Input
+                                id="github"
                                 value={isEditing ? editData.github : profileData.github}
                                 onChange={(e) => setEditData({ ...editData, github: e.target.value })}
                                 disabled={!isEditing}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                                 placeholder="github.com/username"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn Profile</label>
-                            <input
-                                type="text"
+                        <div className="flex flex-col gap-1.5">
+                            <Label htmlFor="linkedin">LinkedIn profile</Label>
+                            <Input
+                                id="linkedin"
                                 value={isEditing ? editData.linkedin : profileData.linkedin}
                                 onChange={(e) => setEditData({ ...editData, linkedin: e.target.value })}
                                 disabled={!isEditing}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                                 placeholder="linkedin.com/in/username"
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Action Buttons */}
                 {isEditing && (
-                    <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-gray-100">
-                        <button
-                            onClick={handleCancel}
-                            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
+                    <div className="mt-6 flex justify-end gap-3 border-t border-border pt-6">
+                        <Button variant="outline" onClick={handleCancel}>
                             Cancel
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={saveLoading}
-                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                        >
+                        </Button>
+                        <Button onClick={handleSave} disabled={saveLoading}>
                             {saveLoading ? (
                                 <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="size-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                     Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="w-4 h-4" />
-                                    Save Changes
+                                    <Save className="size-4" />
+                                    Save changes
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 )}
-            </div>
+            </Card>
 
-            {/* Stats & Achievements */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Award className="w-5 h-5 text-blue-600" />
-                        Hackathon Activity
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <Card className="p-6">
+                    <h3 className="mb-4 flex items-center gap-2 font-heading text-h3 font-semibold text-foreground">
+                        <Award className="size-5 text-primary" />
+                        Hackathon activity
                     </h3>
                     {statsLoading ? (
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4].map(i => <div key={i} className="h-4 bg-gray-100 rounded w-full animate-pulse"></div>)}
+                        <div className="space-y-3">
+                            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-4 w-full" />)}
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center pb-2 border-b border-gray-50">
-                                <span className="text-gray-600">Total Participations</span>
-                                <span className="font-bold text-gray-900">{hackathonStats.totalParticipations}</span>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between border-b border-border pb-2">
+                                <span className="text-muted-foreground">Total participations</span>
+                                <span className="font-semibold text-foreground">{hackathonStats.totalParticipations}</span>
                             </div>
-                            <div className="flex justify-between items-center pb-2 border-b border-gray-50">
-                                <span className="text-gray-600">Teams Formed</span>
-                                <span className="font-bold text-gray-900">{hackathonStats.teamsCreated}</span>
+                            <div className="flex items-center justify-between border-b border-border pb-2">
+                                <span className="text-muted-foreground">Teams formed</span>
+                                <span className="font-semibold text-foreground">{hackathonStats.teamsCreated}</span>
                             </div>
-                            <div className="flex justify-between items-center pb-2 border-b border-gray-50">
-                                <span className="text-gray-600">Prizes Secured</span>
-                                <span className="font-bold text-green-600">{hackathonStats.prizesWon}</span>
+                            <div className="flex items-center justify-between border-b border-border pb-2">
+                                <span className="text-muted-foreground">Prizes secured</span>
+                                <span className="font-semibold text-success">{hackathonStats.prizesWon}</span>
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Success Rate</span>
-                                <span className="font-bold text-blue-600">{hackathonStats.successRate}</span>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Success rate</span>
+                                <span className="font-semibold text-primary">{hackathonStats.successRate}</span>
                             </div>
                         </div>
                     )}
-                </div>
+                </Card>
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Milestones & Awards</h3>
+                <Card className="p-6">
+                    <h3 className="mb-4 font-heading text-h3 font-semibold text-foreground">Milestones &amp; awards</h3>
                     {statsLoading ? (
                         <div className="space-y-3">
-                            {[1, 2].map(i => <div key={i} className="h-20 bg-gray-100 rounded w-full animate-pulse"></div>)}
+                            {[1, 2].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
                         </div>
                     ) : hackathonStats.achievements && hackathonStats.achievements.length > 0 ? (
-                        <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                        <div className="max-h-[220px] space-y-3 overflow-y-auto pr-1">
                             {hackathonStats.achievements.map((achievement, index) => (
                                 <div
                                     key={`${achievement.hackathonId}-${index}`}
-                                    className="flex items-start gap-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl"
+                                    className="flex items-start gap-3 rounded-xl border border-border bg-primary-soft p-4"
                                 >
-                                    <div className="flex-shrink-0 bg-white p-2 rounded-lg shadow-sm">
-                                        <Award className="w-5 h-5 text-blue-600" />
+                                    <div className="shrink-0 rounded-lg bg-surface p-2 shadow-xs">
+                                        <Award className="size-5 text-primary-hover" />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-gray-900 text-sm leading-tight">{achievement.hackathonTitle}</p>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">Rank #{achievement.rank}</span>
-                                            <span className="text-xs text-gray-600">{achievement.rewardTitle}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-semibold text-foreground">{achievement.hackathonTitle}</p>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <Badge variant="secondary">Rank #{achievement.rank}</Badge>
+                                            <span className="text-xs text-muted-foreground">{achievement.rewardTitle}</span>
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-10 text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <Award className="w-12 h-12 mx-auto mb-3 text-gray-300 opacity-50" />
-                            <p className="font-medium text-gray-600">No milestones yet</p>
-                            <p className="text-xs text-gray-500 px-6 mt-1">Join hackathons and collaborate with teams to earn recognition!</p>
+                        <div className="rounded-xl border border-dashed border-border py-10 text-center">
+                            <Award className="mx-auto mb-3 size-10 text-muted-foreground" />
+                            <p className="font-medium text-foreground">No milestones yet</p>
+                            <p className="mt-1 px-6 text-xs text-muted-foreground">
+                                Join hackathons and collaborate with teams to earn recognition.
+                            </p>
                         </div>
                     )}
-                </div>
+                </Card>
             </div>
         </div>
     )

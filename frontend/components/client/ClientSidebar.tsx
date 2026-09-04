@@ -79,16 +79,6 @@ export function ClientSidebar() {
       label: 'Settings',
       path: '/client/settings',
     },
-    {
-      icon: <Coffee size={20} />,
-      label: 'Caffeine AI',
-      path: '/client/caffeine-ai',
-    },
-    {
-      icon: <CreditCard size={20} />,
-      label: 'Crypto Card',
-      path: '/client/crypto-card',
-    },
   ]
 
   const handleLogout = async () => {

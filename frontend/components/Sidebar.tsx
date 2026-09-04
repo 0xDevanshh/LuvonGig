@@ -72,16 +72,6 @@ export function Sidebar() {
       path: '/freelancer/hackathons'
     },
     {
-      icon: <Coffee size={20} />,
-      label: 'Caffeine AI',
-      path: '/freelancer/caffeine-ai'
-    },
-    {
-      icon: <CreditCard size={20} />,
-      label: 'Crypto Card',
-      path: '/freelancer/crypto-card'
-    },
-    {
       icon: <User size={20} />,
       label: 'Profile',
       path: '/freelancer/profile'
