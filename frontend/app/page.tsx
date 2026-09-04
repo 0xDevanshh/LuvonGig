@@ -1,52 +1,25 @@
-"use client"
-import Navbar from "../components/Navbar";
-import Hero from "../components/Hero";
-import Logos from "../components/Logos";
-import OrganisedProcess from "../components/Section3";
-import Sect10 from "../components/Sect10";
-import Vision from "../components/Vision";
-import Sect2 from "../components/Sect2";
-import Sect4 from "../components/Sect4";
-import Sect6 from "../components/Sect6";
-import Sect8 from "../components/Sect8";
-import SpecializedServices from "../components/Section5";
-import FAQSection from "../components/Section7";
-import { Footer } from "../components/Footer";
-import WhyChooseWorkbudd from "../components/Section9";
-import BackToTop from "../components/BackToTop";
+import { Navbar } from "@/components/landing/Navbar"
+import { Hero } from "@/components/landing/Hero"
+import { HowItWorks } from "@/components/landing/HowItWorks"
+import { Categories } from "@/components/landing/Categories"
+import { TrustSection } from "@/components/landing/TrustSection"
+import { Faq } from "@/components/landing/Faq"
+import { FinalCta } from "@/components/landing/FinalCta"
+import { Footer } from "@/components/landing/Footer"
 
-function Home() {
+export default function Home() {
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <div id="home">
+      <main className="flex-1">
         <Hero />
-      </div>
-      <Logos />
-      <Sect2 />
-      <div id="how-it-works">
-        <OrganisedProcess />
-      </div>
-      <div id="features">
-        <Sect4 />
-      </div>
-      <div id="use-cases">
-        <SpecializedServices />
-      </div>
-      <Sect6 />
-      <div id="faq">
-        <FAQSection />
-      </div>
-      <Sect8 />
-      <div id="why-choose-us">
-        <WhyChooseWorkbudd />
-      </div>
-      <Sect10 />
-      <Vision />
+        <HowItWorks />
+        <Categories />
+        <TrustSection />
+        <Faq />
+        <FinalCta />
+      </main>
       <Footer />
-      <BackToTop />
-    </>
-  );
+    </div>
+  )
 }
-
-export default Home;
