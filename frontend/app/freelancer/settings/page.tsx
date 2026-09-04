@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useUserContext } from '@/contexts/UserContext';
 import { Button } from '@/components/ui/button';
-import { Shield, Wallet, Lock, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Shield, Wallet, Lock, RefreshCw, CheckCircle, AlertCircle, Landmark, ChevronRight } from 'lucide-react';
 
 interface WalletInfo {
     principal: string;
@@ -115,6 +116,23 @@ export default function FreelancerSettingsPage() {
                         Manage your freelancer account security, credentials, and wallet integration.
                     </p>
                 </header>
+
+                {/* Payouts Section */}
+                <Link
+                    href="/freelancer/settings/payouts"
+                    className="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-8 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-50 rounded-lg">
+                            <Landmark className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">Payouts</h2>
+                            <p className="text-sm text-gray-500">Connect a Stripe account to get paid for released work</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                </Link>
 
                 {/* Wallet Section */}
                 <section className="bg-white rounded-xl border border-gray-200 p-8 shadow-sm space-y-6">
