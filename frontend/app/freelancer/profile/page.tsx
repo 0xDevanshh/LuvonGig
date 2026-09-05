@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 export default function FreelancerProfilePage() {
     const { profile, isLoading: profileLoading } = useUserProfile()
@@ -211,15 +212,15 @@ export default function FreelancerProfilePage() {
 
                 <div className="mb-6 flex items-center gap-6">
                     <div className="relative">
-                        <img
-                            src={
-                                profileImagePreview ||
-                                (isEditing ? editData.profileImage : profileData.profileImage) ||
-                                '/assets/default-avatar.png'
-                            }
-                            alt="Profile"
-                            className="size-24 rounded-full border-4 border-background object-cover shadow-sm"
-                        />
+                        <Avatar className="size-24 border-4 border-background shadow-sm">
+                            <AvatarImage
+                                src={profileImagePreview || (isEditing ? editData.profileImage : profileData.profileImage)}
+                                alt={profileData.fullName || 'Profile'}
+                            />
+                            <AvatarFallback className="bg-primary-soft text-2xl font-semibold text-primary-hover">
+                                {(profileData.fullName || profile.email || 'F').charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                        </Avatar>
                         {isEditing && (
                             <>
                                 <input

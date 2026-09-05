@@ -1,16 +1,16 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { MessageSquare } from 'lucide-react'
-import { ClientChatsList } from '../../../components/client/chat/ClientChatsList'
-import { ClientChatConversation } from '../../../components/client/chat/ClientChatConversation'
-import ClientLayout from '../layout'
+import { MessageSquare, AlertCircle } from 'lucide-react'
+import { ClientChatsList } from '@/components/client/chat/ClientChatsList'
+import { ClientChatConversation } from '@/components/client/chat/ClientChatConversation'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ChatPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load user email from server session
   useEffect(() => {
     const fetchUserSession = async () => {
       try {
@@ -21,35 +21,23 @@ export default function ChatPage() {
         if (data.success && data.session?.email) {
           const email = data.session.email
           setUserEmail(email)
-          
-          // Check if we should pre-select a chat from URL params
+
           if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search)
             const withParam = urlParams.get('with')
-
-            if (withParam) {
-              setSelectedChatId(withParam)
-              console.log(`[DEBUG] Chat URL param: with=${withParam}, userEmail=${email}`)
-            }
+            if (withParam) setSelectedChatId(withParam)
           }
 
-          // Authenticate with the canister (non-blocking)
           fetch('/api/chat/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              displayName: 'Client User'
-            })
-          }).then(res => res.json())
-            .then(authData => console.log('Authentication result:', authData))
-            .catch(error => console.error('Authentication error:', error))
+            body: JSON.stringify({ email, displayName: 'Client User' })
+          }).catch(error => console.error('Chat auth error (non-critical):', error))
         } else {
           console.warn('[ClientChat] No user session found')
         }
       } catch (error) {
         console.error('Error fetching user session:', error)
-        console.warn('[ClientChat] No user email available for authentication')
       } finally {
         setIsLoading(false)
       }
@@ -61,7 +49,6 @@ export default function ChatPage() {
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId)
 
-    // Update URL with the 'with' parameter
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href)
       url.searchParams.set('with', chatId)
@@ -69,74 +56,57 @@ export default function ChatPage() {
     }
   }
 
-
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading messages...</p>
-        </div>
+      <div className="flex h-full w-full gap-4 p-6">
+        <Skeleton className="h-full w-1/3" />
+        <Skeleton className="hidden h-full flex-1 md:block" />
       </div>
     )
   }
 
   if (!userEmail) {
     return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <div className="text-center p-8">
-          <div className="text-red-500 mb-4">
-            <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Please log in</h3>
-          <p className="text-sm text-gray-500 mb-4">You need to be logged in to view messages</p>
-        </div>
+      <div className="flex h-full items-center justify-center p-6">
+        <EmptyState icon={AlertCircle} title="Please log in" description="You need to be logged in to view messages." />
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-      {/* Chat Header */}
-      <div className="p-4 border-b border-gray-200 flex-shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-      </div>
-
-      {/* Chat Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Chat List */}
-        <div className="w-full md:w-1/3 border-r border-gray-200 flex flex-col">
+    <div className="flex h-full w-full overflow-hidden bg-surface">
+      <div className="flex h-full w-full flex-col border-r border-border md:w-1/3">
+        <div className="shrink-0 border-b border-border p-6">
+          <h1 className="font-heading text-h2 font-semibold text-foreground">Messages</h1>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <ClientChatsList
             onSelectChat={handleSelectChat}
             selectedChatId={selectedChatId}
             userEmail={userEmail}
           />
         </div>
+      </div>
 
-        {/* Right Panel - Chat Conversation */}
-        {selectedChatId && userEmail ? (
-          <div className="hidden md:flex flex-1 flex-col">
-            <ClientChatConversation chatId={selectedChatId} userEmail={userEmail} />
-          </div>
+      <div className="hidden h-full min-w-0 flex-1 flex-col md:flex">
+        {selectedChatId ? (
+          <ClientChatConversation chatId={selectedChatId} userEmail={userEmail} />
         ) : (
-          <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <MessageSquare size={64} className="mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
-              <p className="text-gray-500">Choose a chat from the left to start messaging</p>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile - Show conversation when selected */}
-        {selectedChatId && userEmail && (
-          <div className="md:hidden flex-1 flex flex-col absolute inset-0 bg-white z-10">
-            <ClientChatConversation chatId={selectedChatId} userEmail={userEmail} />
+          <div className="flex h-full items-center justify-center">
+            <EmptyState
+              icon={MessageSquare}
+              title="Select a conversation"
+              description="Choose a conversation from the list to see messages."
+            />
           </div>
         )}
       </div>
+
+      {selectedChatId && (
+        <div className="absolute inset-0 z-10 flex flex-1 flex-col bg-surface md:hidden">
+          <ClientChatConversation chatId={selectedChatId} userEmail={userEmail} />
+        </div>
+      )}
     </div>
   )
 }

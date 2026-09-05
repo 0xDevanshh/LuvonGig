@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { Search, MessageSquare, Briefcase, Calendar, DollarSign, Activity } from 'lucide-react'
 import { getUserProfileByEmail, UserProfile } from '../../../lib/user-profile'
+import { formatMoney } from '@/lib/currency'
 
 interface BookingChat {
   booking_id: string
@@ -231,7 +232,7 @@ export function ClientChatsList({
                     created_at: relationship.createdAt,
                     updated_at: relationship.updatedAt,
                     package_name: 'Package',
-                    price: relationship.totalAmount ? `${(parseInt(relationship.totalAmount) / 100000000).toFixed(2)} ICP` : '0 ICP',
+                    price: relationship.totalAmount ? formatMoney(relationship.totalAmount) : formatMoney(0),
                     description: relationship.description,
                     contactEmail: relationship.partnerEmail,
                     lastMessage: undefined

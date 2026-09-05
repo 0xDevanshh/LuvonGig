@@ -1,87 +1,22 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useUserContext } from '@/contexts/UserContext';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-
-interface WalletInfo {
-  principal: string;
-  accountId: string;
-}
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { PageHeader } from '@/components/ui/page-header';
+import { Lock, RefreshCw, CheckCircle } from 'lucide-react';
 
 export default function ClientSettingsPage() {
-  const { profile, refreshProfile } = useUserContext();
-  const [profileForm, setProfileForm] = useState({
-    firstName: '',
-    lastName: '',
-    bio: '',
-    location: '',
-    phone: '',
-    github: '',
-    linkedin: '',
-    website: '',
-  });
-  const [profileStatus, setProfileStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
-  const [walletLoading, setWalletLoading] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [passwordStatus, setPasswordStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle');
 
-  useEffect(() => {
-    if (!profile.isLoaded) return;
-    setProfileForm((prev) => ({
-      ...prev,
-      firstName: profile.firstName || prev.firstName,
-      lastName: profile.lastName || prev.lastName,
-    }));
-  }, [profile]);
-
-  useEffect(() => {
-    loadWalletInfo();
-  }, []);
-
-  const loadWalletInfo = async () => {
-    setWalletLoading(true);
-    try {
-      const response = await fetch('/api/user/wallet');
-      const data = await response.json();
-      if (data.success && data.data) {
-        setWalletInfo(data.data);
-      } else {
-        setWalletInfo(null);
-      }
-    } catch (error) {
-      console.error('Failed to load wallet info:', error);
-    } finally {
-      setWalletLoading(false);
-    }
-  };
-
-  const handleProfileSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setProfileStatus('saving');
-    try {
-      const response = await fetch('/api/user/settings/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileForm),
-      });
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to update profile');
-      }
-      setProfileStatus('saved');
-      window.alert('Profile updated successfully.');
-      refreshProfile();
-    } catch (error: any) {
-      console.error('Settings profile error:', error);
-      window.alert(`Failed to update profile: ${error?.message || 'Unknown error'}`);
-      setProfileStatus('idle');
-    }
-  };
-
   const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!passwordForm.newPassword) {
+      window.alert('Please enter a new password.');
+      return;
+    }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       window.alert('Passwords do not match. Please try again.');
       return;
@@ -97,76 +32,72 @@ export default function ClientSettingsPage() {
       if (!data.success) {
         throw new Error(data.error || 'Failed to update password');
       }
-      window.alert('Password updated successfully.');
       setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setPasswordStatus('submitted');
+      setTimeout(() => setPasswordStatus('idle'), 3000);
     } catch (error: any) {
       console.error('Password settings error:', error);
       window.alert(`Password reset failed: ${error?.message || 'Unknown error'}`);
-    } finally {
       setPasswordStatus('idle');
     }
   };
 
-  const walletSummary = useMemo(() => {
-    if (!walletInfo) return 'No wallet connected yet.';
-    return `Principal: ${walletInfo.principal} · Account ID: ${walletInfo.accountId}`;
-  }, [walletInfo]);
-
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold text-gray-900">Client Settings</h1>
-          <p className="text-gray-600">
-            Update your profile information, reset your password, and manage wallet details.
-          </p>
-        </header>
+    <div className="p-6">
+      <PageHeader title="Settings" description="Manage your account security." />
 
-        <section className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Wallet & Security</h2>
-              <p className="text-sm text-gray-600">Managed via the user canister</p>
+      <div className="mx-auto mt-8 max-w-3xl space-y-6">
+        <section className="space-y-6 rounded-xl border border-border bg-surface p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-lg bg-primary-soft">
+              <Lock className="size-5 text-primary-hover" />
             </div>
-            <button
-              type="button"
-              className="text-sm text-blue-600 hover:text-blue-800"
-              onClick={loadWalletInfo}
-            >
-              {walletLoading ? 'Refreshing…' : 'Refresh wallet'}
-            </button>
+            <div>
+              <h2 className="font-heading text-h3 font-semibold text-foreground">Login &amp; security</h2>
+              <p className="text-sm text-muted-foreground">Maintain your account access credentials.</p>
+            </div>
           </div>
-          <div className="text-sm text-gray-600 leading-relaxed">
-            {walletSummary}
-          </div>
-          <form className="space-y-3" onSubmit={handlePasswordSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New password</label>
-                <input
+
+          <form className="space-y-6" onSubmit={handlePasswordSubmit}>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="newPassword">New password</Label>
+                <Input
+                  id="newPassword"
                   type="password"
                   value={passwordForm.newPassword}
                   onChange={(event) => setPasswordForm({ ...passwordForm, newPassword: event.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring focus:ring-purple-200 focus:outline-none"
+                  placeholder="••••••••"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
-                <input
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="confirmPassword">Confirm new password</Label>
+                <Input
+                  id="confirmPassword"
                   type="password"
                   value={passwordForm.confirmPassword}
                   onChange={(event) => setPasswordForm({ ...passwordForm, confirmPassword: event.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-purple-500 focus:ring focus:ring-purple-200 focus:outline-none"
+                  placeholder="••••••••"
                 />
               </div>
             </div>
-            <Button type="submit" variant="secondary" disabled={passwordStatus === 'submitting'}>
-              {passwordStatus === 'submitting' ? 'Updating…' : 'Reset password'}
-            </Button>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={passwordStatus === 'submitting'}>
+                {passwordStatus === 'submitting' ? (
+                  <RefreshCw className="size-4 animate-spin" />
+                ) : passwordStatus === 'submitted' ? (
+                  <CheckCircle className="size-4" />
+                ) : null}
+                {passwordStatus === 'submitting'
+                  ? 'Updating password...'
+                  : passwordStatus === 'submitted'
+                    ? 'Password updated'
+                    : 'Update password'}
+              </Button>
+            </div>
           </form>
         </section>
       </div>
     </div>
   );
 }
-

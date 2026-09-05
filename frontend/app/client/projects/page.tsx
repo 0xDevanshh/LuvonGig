@@ -1,23 +1,23 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/Header';
 import { useBookings, useJobProjects } from '@/hooks/useMarketplace';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { formatMoney } from '@/lib/currency';
-import { formatBookingDate, formatBookingDateShort, formatRelativeTime, isOverdue, getTimeRemaining } from '@/lib/date-utils';
+import { formatBookingDateShort } from '@/lib/date-utils';
 import {
-  Clock,
   CheckCircle,
-  XCircle,
-  AlertCircle,
-  DollarSign,
   User,
   RefreshCw,
   Wallet,
-  Send,
-  ArrowLeft
+  ArrowLeft,
+  Briefcase
 } from 'lucide-react';
 
 /** The live payment for a booking, as /api/payments/for-booking returns it. */
@@ -33,7 +33,6 @@ const isHeld = (payment: BookingPayment | null | undefined) => payment?.state ==
 
 export default function ClientProjects() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
   const [userId, setUserId] = useState<string>(''); // For service bookings (email)
   const [jobUserId, setJobUserId] = useState<string>(''); // For job marketplace (8-char ID)
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -78,27 +77,22 @@ export default function ClientProjects() {
 
     const normalizedJobs = jobProjects
       .filter((j: any) => {
-        const rawStatus = getStatusString(j.status);
-        const status = rawStatus.toUpperCase();
-        const shouldShow = status === 'ASSIGNED' || status === 'INPROGRESS' || status === 'COMPLETED' || status === 'COMPLETEDANDPAID';
-        if (!shouldShow) {
-
-        }
-        return shouldShow;
+        const status = getStatusString(j.status).toUpperCase();
+        return status === 'ASSIGNED' || status === 'COMPLETED' || status === 'PAID';
       })
       .map((j: any) => ({
         ...j,
         id: `job_${j.id}`,
         title: j.title || 'Job Project',
         type: 'job',
-        displayStatus: getStatusString(j.status),
+        displayStatus: getStatusString(j.status).toUpperCase() === 'ASSIGNED' ? 'Active' : 'Completed',
         // toJobDto sends budget_minor; `budgetAmount` never existed on it and
         // rendered every job card as "NaN ICP".
         amountMinor: j.budget_minor,
         currency: j.currency || 'USD',
-        createdAt: Number(j.createdAt),
-        freelancer: j.freelancerId,
-        payment_status: getStatusString(j.status) === 'CompletedAndPaid' ? 'Paid' : 'HeldInEscrow',
+        createdAt: Number(new Date(j.createdAt)),
+        freelancer: j.freelancer_email || j.freelancerId,
+        payment_status: getStatusString(j.status).toUpperCase() === 'PAID' ? 'Paid' : 'HeldInEscrow',
         payment_method: 'escrow'
       }));
 
@@ -115,18 +109,14 @@ export default function ClientProjects() {
         const data = await response.json();
 
         if (data.success && data.session) {
-
-          setSession(data.session);
           setUserId(data.session.email); // Use email for service bookings
           setJobUserId(data.session.userId || data.session.email); // Use 8-char ID, fallout to email
         } else {
-
-          // Redirect to login if no session
-          router.push('/auth/login');
+          router.push('/login');
         }
       } catch (error) {
-        console.error('🎫 ClientProjects: Error fetching session:', error);
-        router.push('/auth/login');
+        console.error('ClientProjects: Error fetching session:', error);
+        router.push('/login');
       }
     };
 
@@ -166,7 +156,7 @@ export default function ClientProjects() {
     }
   };
 
-  // Release escrow funds using Plug wallet
+  // Release escrow funds held via Stripe.
   const handleRelease = async (e: React.MouseEvent, bookingId: string, paymentId: string) => {
     e.stopPropagation(); // Prevent card click
 
@@ -177,11 +167,8 @@ export default function ClientProjects() {
     setProcessingPayment(prev => ({ ...prev, [bookingId]: 'releasing' }));
 
     try {
-      // Release is one authenticated request. This previously connected Plug,
-      // built an escrow actor from a Candid IDL, read the escrow, worked out
-      // the service price and called escrow.release() — roughly 100 lines of
-      // wallet plumbing in the browser. Whether the caller may release is
-      // decided server-side; only the client who paid can.
+      // Release is one authenticated request. Whether the caller may release
+      // is decided server-side; only the client who paid can.
       const res = await fetch(`/api/payments/${encodeURIComponent(paymentId)}/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -260,100 +247,60 @@ export default function ClientProjects() {
     if (typeof status === 'string') {
       return status;
     } else if (typeof status === 'object' && status !== null) {
-      // Handle canister variant status format like {Active: null}, {Pending: null}, etc.
       const statusKey = Object.keys(status)[0];
-      // Normalize to Sentence case for display/comparison if needed, but the filter now handles upper
       return statusKey || 'Pending';
     }
     return 'Pending';
   };
 
-  const getStatusIcon = (status: any) => {
-    const statusStr = getStatusString(status);
-    switch (statusStr) {
-      case 'Pending': return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'InProgress': return <Clock className="w-4 h-4 text-blue-500" />;
-      case 'Completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'Cancelled': return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'Disputed': return <AlertCircle className="w-4 h-4 text-orange-500" />;
-      case 'Active': return <Clock className="w-4 h-4 text-blue-500" />;
-      default: return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-
   if (bookingsLoading || jobsLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-white">
-        <main className="flex-1 container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg">Loading projects...</div>
-          </div>
-        </main>
+      <div className="p-6">
+        <Skeleton className="mb-6 h-9 w-64" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-52" />)}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="p-6">
+      <PageHeader
+        title="My projects"
+        actions={
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
+          >
+            <option value="">All status</option>
+            <option value="Pending">Pending</option>
+            <option value="Active">Active</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="InDispute">In dispute</option>
+          </select>
+        }
+      />
 
-      <main className="flex-1 container mx-auto px-4 py-6">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-[#161616]">My Projects</h1>
-          </div>
-          <div className="flex gap-2 items-center">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2"
-            >
-              <option value="">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="InProgress">In Progress</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="Disputed">Disputed</option>
-            </select>
-          </div>
+      {(bookingsError || jobsError) && (
+        <div className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+          {bookingsError || jobsError}
         </div>
+      )}
 
-        {(bookingsError || jobsError) && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {bookingsError || jobsError}
-          </div>
-        )}
-
-        {allProjects.length === 0 && !bookingsLoading && !jobsLoading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No projects found</p>
-            <p className="text-gray-400 text-sm mt-2">
-              {bookingsError || jobsError
-                ? `Error: ${bookingsError || jobsError}`
-                : 'Your project list is currently empty.'}
-            </p>
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
-              <p className="text-sm text-blue-800">
-                Projects appear here once you book a service or assign a job.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Projects Grid */}
-          {allProjects.length > 0 ? (
-            allProjects
-              .filter((project) => {
-                // The status filter is the only one left. There used to be a
-                // second rule here that hid escrow projects until their escrow
-                // read as funded — a distinction that only meant something
-                // while an ICP escrow could be created and then never paid
-                // into. It has also been inert for as long as the escrow
-                // lookup has been returning 410, so dropping it changes
-                // nothing a user would see.
-                return !statusFilter || project.displayStatus === statusFilter;
-              })
+      <div className="mt-6">
+        {allProjects.length === 0 ? (
+          <EmptyState
+            icon={Briefcase}
+            title="No projects found"
+            description="Projects appear here once you book a service or assign a job."
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {allProjects
+              .filter((project) => !statusFilter || project.displayStatus === statusFilter)
               .map((project) => {
                 const payment = payments[project.id];
                 const isProcessing = processingPayment[project.id];
@@ -361,41 +308,32 @@ export default function ClientProjects() {
                 return (
                   <Card
                     key={project.id}
-                    className="border cursor-pointer transition-all border-gray-200 hover:border-gray-300 hover:shadow-md overflow-hidden"
+                    className="cursor-pointer overflow-hidden transition-colors hover:border-primary"
                     onClick={() => router.push(`/client/projects/${project.id}`)}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="text-lg line-clamp-2 break-words">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="line-clamp-2 break-words text-base">
                             {project.title}
                           </CardTitle>
-                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            {getStatusIcon(project.status)}
-                            <Badge
-                              variant={project.displayStatus === 'Completed' ? 'default' : 'secondary'}
-                            >
-                              {project.displayStatus}
-                            </Badge>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={project.displayStatus} />
                             {project.payment_status && (
-                              <Badge
-                                variant={getStatusString(project.payment_status) === 'Paid' || getStatusString(project.payment_status) === 'Completed' ? 'default' : 'outline'}
-                              >
-                                {getStatusString(project.payment_status)}
-                              </Badge>
+                              <StatusBadge status={getStatusString(project.payment_status)} />
                             )}
                             {project.type === 'job' && (
-                              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                JOB
+                              <Badge variant="outline" className="text-xs">
+                                Job
                               </Badge>
                             )}
                           </div>
                         </div>
-                        <div className="text-right shrink-0 max-w-[140px]">
-                          <div className="text-base font-semibold text-[#0B1F36] truncate">
+                        <div className="max-w-[140px] shrink-0 text-right">
+                          <div className="truncate text-base font-semibold text-foreground">
                             {formatMoney(project.amountMinor, project.currency)}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {formatBookingDateShort(project.createdAt)}
                           </div>
                         </div>
@@ -404,75 +342,74 @@ export default function ClientProjects() {
                     <CardContent className="pt-0">
                       <div className="space-y-3">
                         {project.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
+                          <p className="line-clamp-2 text-sm text-muted-foreground">
                             {project.description}
                           </p>
                         )}
                         {project.special_instructions && (
-                          <p className="text-sm text-gray-600 line-clamp-2 italic">
-                            "{project.special_instructions}"
+                          <p className="line-clamp-2 text-sm italic text-muted-foreground">
+                            &ldquo;{project.special_instructions}&rdquo;
                           </p>
                         )}
 
-                        <div className="flex items-center justify-between text-xs text-gray-500 min-w-0">
-                          <div className="flex items-center gap-4 min-w-0 flex-1 mr-2">
-                            <span className="flex items-center gap-1 min-w-0">
-                              <User size={12} className="shrink-0" />
-                              <span className="truncate max-w-[180px]">
-                                {project.freelancer || 'Awaiting Freelancer'}
-                              </span>
+                        <div className="flex min-w-0 items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex min-w-0 flex-1 items-center gap-1 pr-2">
+                            <User className="size-3 shrink-0" />
+                            <span className="max-w-[180px] truncate">
+                              {project.freelancer || 'Awaiting freelancer'}
                             </span>
-                          </div>
-                          <span className="text-xs font-mono shrink-0">
+                          </span>
+                          <span className="shrink-0 font-mono text-xs">
                             {project.id.toString().split('_').pop()?.slice(-8)}
                           </span>
                         </div>
 
                         {/* Only a held payment can be released or refunded. */}
-                        {isHeld(payment) && project.displayStatus !== 'Completed' && project.displayStatus !== 'CompletedAndPaid' && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Wallet size={14} className="text-purple-600" />
-                              <span className="text-xs font-medium text-gray-700">Payment held</span>
-                              <Badge variant="default" className="text-xs bg-green-600">
+                        {isHeld(payment) && project.displayStatus !== 'Completed' && (
+                          <div className="mt-4 border-t border-border pt-4">
+                            <div className="mb-3 flex items-center gap-2">
+                              <Wallet className="size-3.5 text-primary" />
+                              <span className="text-xs font-medium text-foreground">Payment held</span>
+                              <Badge className="text-xs">
                                 {formatMoney(payment!.amount_minor, payment!.currency)}
                               </Badge>
                             </div>
                             <div className="space-y-2">
-                              <button
+                              <Button
                                 onClick={(e) => handleRelease(e, project.id, payment!.id)}
                                 disabled={!!isProcessing}
-                                className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                className="w-full bg-success text-success-foreground hover:bg-success/90"
                               >
                                 {isProcessing === 'releasing' ? (
                                   <>
-                                    <RefreshCw size={14} className="animate-spin" />
+                                    <RefreshCw className="size-3.5 animate-spin" />
                                     Releasing...
                                   </>
                                 ) : (
                                   <>
-                                    <CheckCircle size={14} />
-                                    Mark Complete & Release
+                                    <CheckCircle className="size-3.5" />
+                                    Mark complete & release
                                   </>
                                 )}
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 onClick={(e) => handleRefund(e, project.id, payment!.id)}
                                 disabled={!!isProcessing}
-                                className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                variant="outline"
+                                className="w-full border-warning/30 text-warning hover:bg-warning/10"
                               >
                                 {isProcessing === 'refunding' ? (
                                   <>
-                                    <RefreshCw size={14} className="animate-spin" />
+                                    <RefreshCw className="size-3.5 animate-spin" />
                                     Refunding...
                                   </>
                                 ) : (
                                   <>
-                                    <ArrowLeft size={14} />
-                                    Request Refund
+                                    <ArrowLeft className="size-3.5" />
+                                    Request refund
                                   </>
                                 )}
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         )}
@@ -480,14 +417,10 @@ export default function ClientProjects() {
                     </CardContent>
                   </Card>
                 );
-              })
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <p className="text-gray-500">No projects to display</p>
-            </div>
-          )}
-        </div>
-      </main>
+              })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
