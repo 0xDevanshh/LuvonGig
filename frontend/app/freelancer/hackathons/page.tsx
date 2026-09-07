@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Calendar, MapPin, Users, DollarSign, Clock, Search, Filter, ArrowRight, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { formatMoney } from '@/lib/currency';
 
 interface Hackathon {
   id: string;
@@ -12,14 +13,15 @@ interface Hackathon {
   theme: string;
   location: string;
   bannerUrl: string;
-  prizePool: string;
+  prize_pool_minor: number | string;
+  currency?: string;
   start_date: string;
   end_date: string;
   registration_start: string;
   registration_end: string;
   min_team_size: number;
   max_team_size: number;
-  status: { Upcoming?: null; Ongoing?: null; Judging?: null; Draft?: null; Completed?: null; Cancelled?: null };
+  status: string;
   created_at: string;
 }
 
@@ -131,7 +133,7 @@ export default function FreelancerHackathonsPage() {
   };
 
   const getStatusInfo = (hackathon: Hackathon) => {
-    if (hackathon.status.Cancelled !== undefined && hackathon.status.Cancelled !== null) {
+    if (hackathon.status === 'cancelled') {
       return { text: 'Cancelled', color: 'bg-red-100 text-red-800', icon: XCircle };
     }
 
@@ -283,7 +285,7 @@ export default function FreelancerHackathonsPage() {
                       </div>
                       <div className="flex items-center">
                         <DollarSign className="w-4 h-4 mr-2" />
-                        Prize: {Number(hackathon.prizePool).toLocaleString()} ICP
+                        Prize: {formatMoney(hackathon.prize_pool_minor, hackathon.currency)}
                       </div>
                     </div>
 

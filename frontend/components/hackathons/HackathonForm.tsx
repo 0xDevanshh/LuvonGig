@@ -440,12 +440,12 @@ export const HackathonForm: React.FC<HackathonFormProps> = ({ initialHackathonId
             </label>
             <label className="space-y-1 block">
               <span className="text-sm font-medium">Theme / Industry</span>
-              <input type="text" value={form.theme} onChange={e => updateForm('theme', e.target.value)} className="w-full rounded-md border p-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. DeFi, AI, Social Impact" />
+              <input type="text" value={form.theme} onChange={e => updateForm('theme', e.target.value)} className="w-full rounded-md border p-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. AI, Fintech, Social Impact" />
             </label>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <label className="space-y-1 block">
-              <span className="text-sm font-medium">Total Prize Pool ($ or ICP)</span>
+              <span className="text-sm font-medium">Total Prize Pool ($)</span>
               <input type="text" value={form.prizePool} onChange={e => updateForm('prizePool', e.target.value)} className="w-full rounded-md border p-2 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g. 50,000" />
             </label>
             <label className="space-y-1 block">
@@ -607,7 +607,7 @@ export const HackathonForm: React.FC<HackathonFormProps> = ({ initialHackathonId
                     />
                   </label>
                   <label className="space-y-1 block">
-                    <span className="text-sm font-medium">Amount ($/ICP)</span>
+                    <span className="text-sm font-medium">Amount ($)</span>
                     <input 
                       type="text" 
                       value={reward.amount} 

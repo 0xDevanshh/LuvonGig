@@ -3,11 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Plus, Search, Edit, Trash2, Users, MapPin, Clock, DollarSign, Eye, Settings, AlertCircle, CheckCircle, Trophy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-const CANISTER_ID = process.env.NEXT_PUBLIC_HACKATHON_CANISTER_ID ?? '';
-const IC_HOST = process.env.NEXT_PUBLIC_IC_HOST ?? ''; // Use testnet directly
-
-
+import { formatMoney } from '@/lib/currency';
 
 interface HackathonWithActions {
   hackathon_id: string;
@@ -21,7 +17,8 @@ interface HackathonWithActions {
   mode: { Online: null } | { Offline: null } | { Hybrid: null };
   bannerUrl: string;
   heroVideoUrl: string;
-  prizePool: bigint | string;
+  prize_pool_minor: number | string;
+  currency?: string;
   start_date: string;
   end_date: string;
   registration_start: string;
@@ -536,7 +533,7 @@ export default function ClientHackathonsPage() {
                       <div className="flex items-center space-x-4">
                         <span className="flex items-center">
                           <DollarSign className="w-4 h-4 mr-1" />
-                          {Number(hackathon.prizePool).toLocaleString()}
+                          {formatMoney(hackathon.prize_pool_minor, hackathon.currency)}
                         </span>
                         <span className="flex items-center">
                           <Users className="w-4 h-4 mr-1" />

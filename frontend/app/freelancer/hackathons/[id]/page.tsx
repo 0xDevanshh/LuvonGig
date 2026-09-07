@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { getUserProfileByEmail } from '@/lib/user-profile';
+import { formatMoney } from '@/lib/currency';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -31,8 +32,8 @@ interface Hackathon {
   theme: string;
   location: string;
   bannerUrl: string;
-  prizePool?: string;
-  prize_pool?: string;
+  prize_pool_minor?: number | string;
+  currency?: string;
   start_date: string;
   end_date: string;
   registration_start: string;
@@ -41,9 +42,9 @@ interface Hackathon {
   submission_end?: string;
   min_team_size: number;
   max_team_size: number;
-  status: { Upcoming?: null; Ongoing?: null; Judging?: null; Draft?: null; Completed?: null; Cancelled?: null };
+  status: string;
   categories: Array<{ id: string; name: string; description: string }>;
-  rewards: Array<{ id: string; title: string; description: string; amount: string; rank: number }>;
+  rewards: Array<{ id: string; title: string; description: string; amount_minor: number | string; currency?: string; rank: number }>;
   faq: string[];
   resources: string[];
   participantsCount?: number;
@@ -551,7 +552,7 @@ export default function FreelancerHackathonDetail() {
   const getStatusInfo = () => {
     if (!hackathon) return { text: 'Unknown', color: 'bg-gray-100 text-gray-800' };
 
-    if (hackathon.status?.Cancelled !== undefined && hackathon.status?.Cancelled !== null) {
+    if (hackathon.status === 'cancelled') {
       return { text: 'Cancelled', color: 'bg-red-100 text-red-800', icon: XCircle };
     }
 
@@ -704,7 +705,7 @@ export default function FreelancerHackathonDetail() {
                           </p>
                           <p className="text-yellow-700 text-sm mb-2">{winnerReward.description}</p>
                           <p className="text-yellow-900 font-bold text-lg">
-                            Prize: {Number(winnerReward.amount).toLocaleString()} ICP
+                            Prize: {formatMoney(winnerReward.amount_minor, winnerReward.currency)}
                           </p>
                         </div>
                       )}
@@ -803,7 +804,7 @@ export default function FreelancerHackathonDetail() {
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-2xl font-bold mb-4">Prizes & Rewards</h2>
-                      <p className="text-gray-600 mb-6">Total Prize Pool: {Number(hackathon.prizePool || hackathon.prize_pool || 0).toLocaleString()} ICP</p>
+                      <p className="text-gray-600 mb-6">Total Prize Pool: {formatMoney(hackathon.prize_pool_minor, hackathon.currency)}</p>
 
                       {hackathon.rewards && hackathon.rewards.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -814,7 +815,7 @@ export default function FreelancerHackathonDetail() {
                                 <div className="flex items-center justify-between mb-2">
                                   <h3 className="font-semibold text-gray-900">{reward.title}</h3>
                                   <span className="text-lg font-bold text-green-600">
-                                    {Number(reward.amount).toLocaleString()} ICP
+                                    {formatMoney(reward.amount_minor, reward.currency)}
                                   </span>
                                 </div>
                                 <p className="text-sm text-gray-600">{reward.description}</p>
@@ -1226,7 +1227,7 @@ export default function FreelancerHackathonDetail() {
                     <DollarSign className="w-4 h-4 mr-2" />
                     Prize Pool
                   </span>
-                  <span className="font-medium">{Number(hackathon.prizePool || hackathon.prize_pool || 0).toLocaleString()} ICP</span>
+                  <span className="font-medium">{formatMoney(hackathon.prize_pool_minor, hackathon.currency)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Theme</span>

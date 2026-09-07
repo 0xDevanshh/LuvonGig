@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { formatMoney } from '@/lib/currency';
 import {
   ArrowLeft,
   Calendar,
@@ -47,7 +48,8 @@ interface Hackathon {
   registration_end: string;
   min_team_size: number;
   max_team_size: number;
-  prize_pool: string;
+  prize_pool_minor: number | string;
+  currency?: string;
   rules?: string;
   status: string;
   created_at: string;
@@ -200,7 +202,8 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
         registration_end: hackathonData.registration_end,
         min_team_size: hackathonData.min_team_size,
         max_team_size: hackathonData.max_team_size,
-        prize_pool: hackathonData.prize_pool,
+        prize_pool_minor: hackathonData.prize_pool_minor,
+        currency: hackathonData.currency,
         status: hackathonData.status,
         created_at: hackathonData.created_at,
         updated_at: hackathonData.updated_at,
@@ -533,7 +536,7 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
                   </div>
                   <div className="absolute top-4 right-4">
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-white">{hackathon.prize_pool}</div>
+                      <div className="text-2xl font-bold text-white">{formatMoney(hackathon.prize_pool_minor, hackathon.currency)}</div>
                       <div className="text-white/80">Prize Pool</div>
                     </div>
                   </div>
@@ -560,7 +563,7 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">{hackathon.prize_pool}</div>
+                      <div className="text-2xl font-bold">{formatMoney(hackathon.prize_pool_minor, hackathon.currency)}</div>
                       <div className="text-white/80">Prize Pool</div>
                     </div>
                   </div>
@@ -961,7 +964,7 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
                           
                           <div className="flex items-center gap-4 mt-2">
                             <p className="text-sm font-bold text-green-700 bg-green-100 px-3 py-1 rounded-lg">
-                              Prize: {Number(winner.amount).toLocaleString()} ICP
+                              Prize: {formatMoney(winner.amount_minor, winner.currency)}
                             </p>
                             {winner.note && (
                               <p className="text-xs text-gray-500 italic">"{winner.note}"</p>
@@ -1182,7 +1185,7 @@ export default function HackathonViewPage({ params }: HackathonViewPageProps) {
                               <h3 className="font-semibold text-gray-900">{reward.title}</h3>
                               <p className="text-sm text-gray-600">{reward.description}</p>
                               <p className="text-sm font-medium text-green-600 mt-1">
-                                {Number(reward.amount).toLocaleString()} ICP
+                                {formatMoney(reward.amount_minor, reward.currency)}
                               </p>
                             </div>
                             <div className="text-right">

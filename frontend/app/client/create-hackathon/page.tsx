@@ -17,8 +17,8 @@ const CreateHackathonContent = () => {
           </h1>
           <p className="text-gray-600">
             {editId 
-              ? 'Update your hackathon details and save changes to the ICP testnet canister.'
-              : 'Fill out the required details and publish directly to the ICP testnet canister.'
+              ? 'Update your hackathon details and save your changes.'
+              : 'Fill out the required details to publish your hackathon.'
             }
           </p>
         </header>
