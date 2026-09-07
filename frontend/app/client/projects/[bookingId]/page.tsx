@@ -4,7 +4,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import ProjectDetailHeader from '@/components/ProjectDetailHeader';
-import ProjectTimeline from '@/components/ProjectTimeline';
 import FinancialInformation from '@/components/FinancialInformation';
 import DocumentManager from '@/components/DocumentManager';
 import { Button } from '@/components/ui/button';
@@ -75,11 +74,11 @@ export default function ProjectDetailPage() {
           setSession(data.session);
           setUserId(data.session.email);
         } else {
-          router.push('/auth/login');
+          router.push('/login');
         }
       } catch (error) {
         console.error('Error fetching session:', error);
-        router.push('/auth/login');
+        router.push('/login');
       }
     };
 
@@ -226,15 +225,12 @@ export default function ProjectDetailPage() {
 
   const handleChatWithFreelancer = () => {
     if (project?.freelancer_email) {
-      // Redirect to the correct chat URL with the freelancer's email
-      window.location.href = `http://localhost:3001/client/chat?with=${encodeURIComponent(project.freelancer_email)}`;
+      router.push(`/client/chat?with=${encodeURIComponent(project.freelancer_email)}`);
     }
   };
 
   const handleViewTransaction = () => {
     if (project?.payment_id) {
-      // For now, just copy the payment ID to clipboard
-      // In a real implementation, this could open a blockchain explorer
       navigator.clipboard.writeText(project.payment_id);
       alert('Payment ID copied to clipboard!');
     }
@@ -642,15 +638,6 @@ export default function ProjectDetailPage() {
                                     : 'N/A'}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Starting Price:</span>
-                            <div className="text-right">
-                              {/* USD pricing hidden as requested */}
-                              {/* {project.package_details.starting_from_usd && (
-                                <div className="text-sm text-green-600">${project.package_details.starting_from_usd.toFixed(2)} USD</div>
-                              )} */}
-                            </div>
-                          </div>
                           {project.package_details.service_category && (
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-600">Category:</span>
@@ -970,20 +957,6 @@ export default function ProjectDetailPage() {
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   Message Freelancer
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                >
-                  <FileText className="w-4 h-4 mr-2" />
-                  View Documents
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Project Settings
                 </Button>
               </CardContent>
             </Card>

@@ -5,18 +5,28 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
     Users,
     DollarSign,
-    Calendar,
+    Clock,
     ArrowLeft,
     CheckCircle2,
-    Loader2
+    XCircle,
+    Loader2,
+    FileText
 } from 'lucide-react'
 import { useUserContext } from '@/contexts/UserContext'
-import { getUserProfileByEmail } from '@/lib/user-profile'
-import { getJob } from '@/lib/api/jobs'
+import { getJob, setProposalStatus } from '@/lib/api/jobs'
+import { formatMoney } from '@/lib/currency'
+
+function titleCase(value: string) {
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+}
 
 export default function JobApplicationsPage({ params }: { params: Promise<{ jobId: string }> }) {
     const router = useRouter()
@@ -33,8 +43,6 @@ export default function JobApplicationsPage({ params }: { params: Promise<{ jobI
         if (!profile?.email || !jobId) return
 
         try {
-            const userProfileData = await getUserProfileByEmail(profile.email)
-            const clientId = userProfileData.userId || profile.email
             // One request: the job carries its proposals, scoped by the API
             // to what this caller is allowed to see.
             const data = await getJob(jobId)
@@ -51,145 +59,175 @@ export default function JobApplicationsPage({ params }: { params: Promise<{ jobI
         fetchData()
     }, [profile?.email, jobId])
 
-    const handleAcceptProposal = async (proposal: any) => {
+    const handleAcceptProposal = (proposal: any) => {
         router.push(`/client/checkout/proposal/${proposal.id}?jobId=${jobId}`)
+    }
+
+    const handleUpdateStatus = async (proposalId: string, newStatus: 'shortlisted' | 'rejected') => {
+        setActionLoading(proposalId)
+        try {
+            await setProposalStatus(jobId, proposalId, newStatus)
+            await fetchData()
+        } catch (error) {
+            console.error('Error updating proposal status:', error)
+            alert(error instanceof Error ? error.message : 'Failed to update status. Please try again.')
+        } finally {
+            setActionLoading(null)
+        }
     }
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <div className="mx-auto max-w-6xl p-6">
+                <Skeleton className="mb-6 h-8 w-48" />
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                    <Skeleton className="h-64 lg:col-span-2" />
+                    <Skeleton className="h-64" />
+                </div>
             </div>
         )
     }
 
     if (!job) {
         return (
-            <div className="p-8 text-center">
-                <h2 className="text-xl font-bold">Job Not Found</h2>
-                <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
+            <div className="flex min-h-[60vh] items-center justify-center p-6">
+                <EmptyState title="Job not found" action={<Button onClick={() => router.back()}>Go back</Button>} />
             </div>
         )
     }
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
-            <Button variant="ghost" onClick={() => router.back()} className="mb-6 -ml-2">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+        <div className="mx-auto max-w-6xl p-6">
+            <Button variant="ghost" onClick={() => router.back()} className="-ml-2 mb-6">
+                <ArrowLeft className="size-4" />
+                Back to dashboard
             </Button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Proposals List */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            Applications ({proposals.length})
-                        </h1>
-                    </div>
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                <div className="space-y-6 lg:col-span-2">
+                    <PageHeader title={`Proposals (${proposals.length})`} />
 
                     {proposals.length === 0 ? (
-                        <Card>
-                            <CardContent className="p-12 text-center text-gray-500">
-                                <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                No applications received yet.
-                            </CardContent>
-                        </Card>
+                        <EmptyState icon={Users} title="No proposals yet" description="Applications will appear here once freelancers apply." />
                     ) : (
-                        proposals.map((proposal) => (
-                            <Card key={proposal.id} className="hover:shadow-md transition-shadow">
-                                <CardContent className="p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="w-12 h-12">
-                                                <AvatarFallback>{proposal.freelancerId.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <h3 className="font-bold text-lg">{proposal.freelancerId}</h3>
+                        proposals.map((proposal) => {
+                            const status = (proposal.status || '').toUpperCase()
+                            const isAccepted = status === 'ACCEPTED'
+                            const isRejected = status === 'REJECTED'
+                            const isShortlisted = status === 'SHORTLISTED'
+
+                            return (
+                                <Card key={proposal.id} className="transition-shadow hover:shadow-md">
+                                    <CardContent className="pt-6">
+                                        <div className="mb-4 flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="size-12">
+                                                    <AvatarFallback className="bg-primary-soft font-semibold text-primary-hover">
+                                                        {(proposal.freelancer_name || proposal.freelancer_email || 'F').slice(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <h3 className="font-semibold text-foreground">
+                                                        {proposal.freelancer_name || proposal.freelancer_email}
+                                                    </h3>
+                                                    <StatusBadge status={titleCase(status || 'Pending')} className="mt-1" />
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="flex items-center gap-1 text-xl font-bold text-success">
+                                                    <DollarSign className="size-4" />
+                                                    {formatMoney(proposal.bid_minor, proposal.currency)}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                    <Clock className="size-3.5" />
+                                                    {proposal.estimatedDeliveryDays} days delivery
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-xl font-bold text-blue-600">
-                                                {(Number(proposal.bidAmount) / 100000000).toFixed(5)} ICP
-                                            </div>
-                                            <div className="text-sm text-gray-500">{proposal.estimatedDeliveryDays} days delivery</div>
+
+                                        <div className="mb-6 rounded-lg bg-secondary p-4">
+                                            <h4 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                                <FileText className="size-3.5" />
+                                                Cover letter
+                                            </h4>
+                                            <p className="whitespace-pre-wrap text-sm text-foreground">{proposal.coverLetter}</p>
                                         </div>
-                                    </div>
 
-                                    <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">Cover Letter</h4>
-                                        <p className="text-gray-600 whitespace-pre-wrap">{proposal.coverLetter}</p>
-                                    </div>
-
-                                    <div className="flex justify-end gap-3">
-
-                                        <Button
-                                            className="bg-green-600 hover:bg-green-700"
-                                            size="sm"
-                                            onClick={() => handleAcceptProposal(proposal)}
-                                            disabled={!!actionLoading || proposal.status.ACCEPTED !== undefined}
-                                        >
-                                            {actionLoading === proposal.id ? (
-                                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                            ) : (
-                                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                        <div className="flex justify-end gap-2">
+                                            {!isRejected && !isAccepted && (
+                                                <Button
+                                                    variant="outline"
+                                                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleUpdateStatus(proposal.id, 'rejected')}
+                                                    disabled={!!actionLoading}
+                                                >
+                                                    {actionLoading === proposal.id ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+                                                    Reject
+                                                </Button>
                                             )}
-                                            {proposal.status.ACCEPTED !== undefined ? 'Selected' : 'Select Freelancer'}
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))
+                                            {!isShortlisted && !isAccepted && !isRejected && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={() => handleUpdateStatus(proposal.id, 'shortlisted')}
+                                                    disabled={!!actionLoading}
+                                                >
+                                                    {actionLoading === proposal.id ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                                    Shortlist
+                                                </Button>
+                                            )}
+                                            {!isRejected && (
+                                                <Button onClick={() => handleAcceptProposal(proposal)} disabled={!!actionLoading || isAccepted}>
+                                                    <CheckCircle2 className="size-4" />
+                                                    {isAccepted ? 'Selected' : 'Select freelancer'}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })
                     )}
                 </div>
 
-                {/* Right Column: Job Summary */}
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Job Post Summary</CardTitle>
+                            <CardTitle>Job post summary</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <h3 className="font-bold text-gray-900">{job.title}</h3>
-                                <p className="text-sm text-gray-600 line-clamp-4 mt-2">{job.description}</p>
+                                <h3 className="font-semibold text-foreground">{job.title}</h3>
+                                <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{job.description}</p>
                             </div>
 
-                            <div className="flex items-center justify-between text-sm py-2 border-y">
-                                <div className="flex items-center text-gray-600 font-medium">
-                                    <DollarSign className="w-4 h-4 mr-2" />
+                            <div className="flex items-center justify-between border-y border-border py-2 text-sm">
+                                <div className="flex items-center font-medium text-muted-foreground">
+                                    <DollarSign className="mr-2 size-4" />
                                     Budget
                                 </div>
-                                <span className="font-bold text-blue-600">
-                                    {(Number(job.budgetAmount) / 100000000).toFixed(5)} ICP
+                                <span className="font-semibold text-foreground">
+                                    {formatMoney(job.budget_minor, job.currency)}
                                 </span>
                             </div>
 
                             <div className="pt-2">
-                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Skills Needed</h4>
+                                <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Skills needed</h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {job.requiredSkills.map((skill: string, i: number) => (
-                                        <Badge key={i} variant="secondary">{skill}</Badge>
+                                    {job.requiredSkills.map((skill: string) => (
+                                        <Badge key={skill} variant="secondary">{skill}</Badge>
                                     ))}
                                 </div>
                             </div>
 
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => router.push(`/client/edit-job/${jobId}`)}
-                            >
-                                Edit Job Post
+                            <Button variant="outline" className="w-full" onClick={() => router.push(`/client/edit-job/${jobId}`)}>
+                                Edit job post
                             </Button>
                         </CardContent>
                     </Card>
 
-                    <Card className="bg-blue-50 border-blue-100">
-                        <CardContent className="p-4 flex gap-3 text-sm text-blue-800">
-                            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                            <p>Choosing a freelancer will notify them and start the project timeline.</p>
-                        </CardContent>
-                    </Card>
+                    <div className="rounded-lg border border-primary/20 bg-primary-soft p-4 text-sm text-primary-hover">
+                        Choosing a freelancer will notify them and start the project timeline.
+                    </div>
                 </div>
             </div>
         </div>
