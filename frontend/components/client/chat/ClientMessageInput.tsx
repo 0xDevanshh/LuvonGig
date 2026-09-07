@@ -121,6 +121,7 @@ export function ClientMessageInput({
           disabled={uploading || sending}
           className="shrink-0 rounded-full text-muted-foreground hover:text-primary"
           title="Send image"
+          aria-label="Send image"
         >
           {uploading ? (
             <Loader2 size={20} className="animate-spin" />
@@ -148,6 +149,15 @@ export function ClientMessageInput({
           )}
           disabled={(!message.trim() && !uploading) || sending || uploading}
           title={
+            uploading || deliveryStatus === 'sending'
+              ? 'Sending...'
+              : deliveryStatus === 'sent'
+                ? 'Message sent!'
+                : deliveryStatus === 'failed'
+                  ? 'Failed to send - try again'
+                  : 'Send message'
+          }
+          aria-label={
             uploading || deliveryStatus === 'sending'
               ? 'Sending...'
               : deliveryStatus === 'sent'

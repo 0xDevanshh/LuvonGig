@@ -291,6 +291,7 @@ export default function AddServiceOthers() {
                               onClick={() => removeQuestion(index)}
                               className="text-red-500 hover:text-red-700"
                               title="Remove question"
+                              aria-label="Remove question"
                             >
                               <X size={16} />
                             </button>
@@ -487,6 +488,7 @@ export default function AddServiceOthers() {
                               onClick={() => removeFaq(index)}
                               className="text-red-500 hover:text-red-700"
                               title="Remove FAQ"
+                              aria-label="Remove FAQ"
                             >
                               <X size={16} />
                             </button>

@@ -478,6 +478,7 @@ export default function UpdateService() {
             <button
               onClick={() => setSuccessMessage(null)}
               className="text-green-700"
+              aria-label="Dismiss success message"
             >
               <X size={18} />
             </button>
@@ -502,6 +503,7 @@ export default function UpdateService() {
             <button
               onClick={() => setError(null)}
               className="text-red-700"
+              aria-label="Dismiss error message"
             >
               <X size={18} />
             </button>
@@ -770,6 +772,7 @@ export default function UpdateService() {
                           })
                         }
                         className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+                        aria-label="Remove cover image"
                       >
                         <X size={16} />
                       </button>
@@ -843,6 +846,7 @@ export default function UpdateService() {
                           onClick={() => handleRemoveImage(index)}
                           className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
                           title="Remove"
+                          aria-label="Remove image"
                         >
                           <X size={16} />
                         </button>
@@ -892,6 +896,7 @@ export default function UpdateService() {
                       <button
                         onClick={() => handleRemoveQuestion(index)}
                         className="text-red-500 hover:text-red-700"
+                        aria-label="Remove question"
                       >
                         <X size={18} />
                       </button>

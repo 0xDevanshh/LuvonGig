@@ -269,6 +269,7 @@ export default function AddServicePortfolio() {
                     <button
                       onClick={() => removePreviewFile(file.id)}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove file"
                     >
                       <X size={14} />
                     </button>

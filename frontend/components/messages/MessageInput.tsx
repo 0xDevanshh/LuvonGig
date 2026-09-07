@@ -133,6 +133,7 @@ export function MessageInput({
           disabled={uploading}
           className="shrink-0 rounded-full text-muted-foreground"
           title="Send image"
+          aria-label="Send image"
         >
           {uploading ? (
             <Loader2 size={20} className="animate-spin" />
@@ -153,6 +154,7 @@ export function MessageInput({
           size="icon"
           className="shrink-0 rounded-full"
           disabled={(!message.trim() && !uploading) || uploading}
+          aria-label="Send message"
         >
           <Send size={20} />
         </Button>
