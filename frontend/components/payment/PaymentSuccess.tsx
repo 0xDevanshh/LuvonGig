@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState } from 'react';
-import { CheckCircle, MessageCircle, ExternalLink, Calendar, User, Shield, Wallet, Coins, Copy } from 'lucide-react';
+import { CheckCircle, MessageCircle, ExternalLink, Calendar, Shield, Receipt, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { BookingTimeline } from './BookingTimeline';
 import { formatBookingDate, formatRelativeTime } from '@/lib/booking-formatters';
@@ -17,8 +17,6 @@ interface PaymentSuccessProps {
     paymentCompletedAt: number;
     bookingConfirmedAt: number;
     transactionId?: string;
-    tokenSymbol?: string;
-    tokenAmount?: string;
   };
 }
 
@@ -89,7 +87,7 @@ export function PaymentSuccess({
           <div className="relative w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30 animate-pulse">
             <CheckCircle size={48} className="text-white" />
             <div className="absolute -top-2 -right-2 w-8 h-8 bg-purple-600 rounded-full border-4 border-white flex items-center justify-center">
-              <Wallet size={16} className="text-white" />
+              <Receipt size={16} className="text-white" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Payment Successful!</h1>
@@ -118,23 +116,9 @@ export function PaymentSuccess({
               <span className="text-sm font-medium text-gray-900">${(totalAmount || 0).toFixed(2)}</span>
             </div>
 
-            {bookingData?.tokenSymbol && bookingData?.tokenAmount && (
-              <div className="flex items-start justify-between">
-                <span className="text-sm text-gray-600">Token Payment</span>
-                <div className="text-right">
-                  <div className="flex items-center space-x-1">
-                    <Coins size={14} className="text-purple-600" />
-                    <span className="text-sm font-medium text-gray-900">
-                      {parseFloat(bookingData.tokenAmount).toFixed(4)} {bookingData.tokenSymbol}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {bookingData?.transactionId && (
               <div className="flex items-start justify-between">
-                <span className="text-sm text-gray-600">Transaction ID</span>
+                <span className="text-sm text-gray-600">Payment ID</span>
                 <button
                   onClick={copyTransactionId}
                   className="text-sm font-mono text-purple-600 hover:text-purple-700 flex items-center space-x-1"
@@ -265,30 +249,6 @@ export function PaymentSuccess({
             </li>
           </ul>
         </div>
-
-        {/* Transaction Info */}
-        {bookingData?.transactionId && (
-          <div className="mt-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <Wallet className="text-purple-600 mt-1" size={18} />
-              <div className="text-sm text-purple-900">
-                <div className="font-semibold mb-1">Transaction Details</div>
-                <p className="text-purple-700">
-                  Transaction processed securely on the Internet Computer blockchain.
-                  <a
-                    href={`https://dashboard.internetcomputer.org/transaction/${bookingData.transactionId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mt-1 text-purple-600 hover:text-purple-700 underline flex items-center space-x-1"
-                  >
-                    <span>View on ICP Dashboard</span>
-                    <ExternalLink size={12} />
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Protection Notice */}
         <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">

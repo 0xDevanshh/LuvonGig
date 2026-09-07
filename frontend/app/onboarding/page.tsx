@@ -18,7 +18,7 @@ export default function OnboardingWelcome() {
               </h1>
               <p className="text-lg text-gray-700 mb-8">
                 Unlock the full potential of your freelance career with
-                Organaise. Begin a rewarding journey where your skills are
+                LuvonGig. Begin a rewarding journey where your skills are
                 valued and your professional growth is inevitable. Start now and
                 pave the path to your success.
               </p>
@@ -50,7 +50,7 @@ export default function OnboardingWelcome() {
                       1. Set Up Your Professional Profile
                     </h3>
                     <p className="text-gray-600">
-                      Create your identity on Organaise by setting up a detailed
+                      Create your identity on LuvonGig by setting up a detailed
                       profile. Highlight your expertise, define your niche, and
                       let your experience speak for itself. A strong profile is
                       the first step to standing out in a competitive
@@ -75,7 +75,7 @@ export default function OnboardingWelcome() {
                     <p className="text-gray-600">
                       Showcase your best work and keep learning. Update your
                       portfolio with your latest projects and achievements. With
-                      Organaise, you also gain access to exclusive resources for
+                      LuvonGig, you also gain access to exclusive resources for
                       skill enhancement to stay ahead of the curve.
                     </p>
                   </div>
@@ -97,7 +97,7 @@ export default function OnboardingWelcome() {
                     <p className="text-gray-600">
                       Dive into a world of opportunities. Browse projects that
                       match your skillset, connect with premier clients, and
-                      start earning. With Organaise, every project is a new
+                      start earning. With LuvonGig, every project is a new
                       horizon.
                     </p>
                   </div>
@@ -109,7 +109,7 @@ export default function OnboardingWelcome() {
       </main>
       <footer className="text-center text-sm text-gray-600 py-6">
         <p>
-          by Signing Up, i agree with Organaise{' '}
+          by Signing Up, i agree with LuvonGig{' '}
           <a href="#" className="text-[#3b7ded] hover:underline">
             privacy policy
           </a>{' '}

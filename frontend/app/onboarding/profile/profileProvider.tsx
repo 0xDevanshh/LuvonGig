@@ -5,14 +5,12 @@ import { Footer } from '@/components/Footer'
 import { ProgressStepper } from '@/components/progress-stepper'
 import { ProfilePreview } from '@/components/ProfilePreview'
 import { useRouter } from 'next/navigation'
-import { User, Globe, Wallet } from 'lucide-react'
+import { User, Globe } from 'lucide-react'
 import { useOnboardingSession as useOnboarding } from '@/hooks/useOnboardingSession'
 
 export function ProfileSetup() {
   const navigate = useRouter()
   const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [walletConnected, setWalletConnected] = useState(false)
-  const [walletInfo, setWalletInfo] = useState<{principal: string; accountId: string} | null>(null)
 
   const {
     profile,
@@ -105,31 +103,6 @@ export function ProfileSetup() {
   const handleBack = () => {
     goToPreviousStep(2);
   }
-
-  // Check if wallet is already connected on component mount
-  useEffect(() => {
-    const checkWallet = async () => {
-      try {
-        const response = await fetch('/api/user/wallet', {
-          method: 'GET',
-        });
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-          setWalletConnected(true);
-          setWalletInfo({
-            principal: result.data.principal,
-            accountId: result.data.accountId,
-          });
-        }
-      } catch (err) {
-        // Wallet not connected yet, ignore error
-        console.log('No wallet found or error checking wallet:', err);
-      }
-    };
-
-    checkWallet();
-  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-[#fcfcfc]">
@@ -350,30 +323,6 @@ export function ProfileSetup() {
                         placeholder="https://twitter.com/yourusername"
                       />
                     </div>
-                  </div>
-                </div>
-
-                {/* Wallet Connection */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                  <h2 className="text-lg font-semibold text-[#161616] mb-4 flex items-center">
-                    <Wallet size={20} className="mr-2 text-purple-600" />
-                    Wallet Connection
-                  </h2>
-
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Connect your Plug wallet to enable secure escrow payments and receive funds from completed projects.
-                    </p>
-                    {walletConnected && walletInfo && (
-                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
-                        <div className="text-sm text-green-800">
-                          <div className="font-medium mb-1">✓ Wallet Connected & Saved</div>
-                          <div className="text-xs font-mono text-green-600">
-                            {walletInfo.principal.substring(0, 20)}...{walletInfo.principal.substring(walletInfo.principal.length - 10)}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
 

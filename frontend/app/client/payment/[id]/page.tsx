@@ -166,10 +166,9 @@ export default function PaymentPage() {
     try {
       const totalUSD = calculateTotal();
 
-      // Extract payment info from ICPay widget
       const transactionId = paymentData.transactionId || paymentData.id;
-      const tokenSymbol = paymentData.symbol || paymentData.ledger || 'ICP';
-      const tokenAmount = paymentData.amount || paymentData.tokenAmount;
+      const tokenSymbol = paymentData.symbol || 'USD';
+      const tokenAmount = paymentData.amount || totalUSD;
 
       // Store payment result
       const result: PaymentResult = {
@@ -279,8 +278,6 @@ export default function PaymentPage() {
       paymentCompletedAt: currentTime,
       bookingConfirmedAt: currentTime,
       transactionId: paymentResult?.transactionId,
-      tokenSymbol: paymentResult?.symbol,
-      tokenAmount: paymentResult?.amount,
     };
 
     return <PaymentSuccess bookingData={bookingData} />;

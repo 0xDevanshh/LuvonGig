@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     id: '1',
     from: 'DeFi Ola',
     userId: 'user.id.223',
-    amount: '+1250 ICP',
+    amount: '+$1,250.00',
     status: 'Completed',
     date: 'Jun 15, 2024 15:00'
   };

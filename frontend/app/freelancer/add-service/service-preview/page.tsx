@@ -47,7 +47,7 @@ export default function ServicePreview() {
       return;
     }
 
-    // submitService already saves to marketplace canister via createService
+    // submitService already saves via the createService API call
     const result = await submitService(userEmail);
 
     if (result.success) {
@@ -244,7 +244,7 @@ export default function ServicePreview() {
             <div className="space-y-4">
               {formData.packages.map((pkg: any, index: number) => {
                 const isPopular = formData.tierMode === '3tier' && index === 1; // Middle package is popular in 3-tier mode
-                const priceInICP = parseFloat(pkg.price_minor.toString()) / 100;
+                const priceInDollars = parseFloat(pkg.price_minor.toString()) / 100;
 
                 return (
                   <div
@@ -303,10 +303,9 @@ export default function ServicePreview() {
                       <div className="text-right mt-4 pt-4 border-t border-gray-200">
                         <p className="text-sm text-gray-500">Starting From</p>
                         <p className="font-bold text-xl">
-                          ${priceInICP.toFixed(2)}
+                          ${priceInDollars.toFixed(2)}
                         </p>
-                        {/* USD conversion removed - showing only ICP */}
-                      </div>
+                                              </div>
                     </div>
                   </div>
                 );
@@ -462,7 +461,7 @@ export default function ServicePreview() {
           <div className={`grid grid-cols-1 gap-6 ${formData.tierMode === '3tier' ? 'md:grid-cols-3' : 'md:grid-cols-1 max-w-md mx-auto'}`}>
             {formData.packages.map((pkg: any, index: number) => {
               const isPopular = formData.tierMode === '3tier' && index === 1;
-              const priceInICP = parseFloat(pkg.price_minor.toString()) / 100;
+              const priceInDollars = parseFloat(pkg.price_minor.toString()) / 100;
 
               return (
                 <div
@@ -484,11 +483,10 @@ export default function ServicePreview() {
                     <h3 className="text-xl font-bold mb-2">{pkg.tier}</h3>
                     <div className="mb-2">
                       <span className="text-4xl font-bold text-blue-600">
-                        ${priceInICP.toFixed(2)}
+                        ${priceInDollars.toFixed(2)}
                       </span>
                     </div>
-                    {/* USD conversion removed - showing only ICP */}
-                    <p className="text-sm text-gray-600 mt-2">
+                                        <p className="text-sm text-gray-600 mt-2">
                       {pkg.title}
                     </p>
                   </div>

@@ -70,48 +70,21 @@ const DEFAULT_UPSELLS: UpsellItem[] = [
   }
 ];
 
-export function UpsellSection({ 
-  upsells = DEFAULT_UPSELLS, 
-  selectedUpsells, 
+export function UpsellSection({
+  upsells = DEFAULT_UPSELLS,
+  selectedUpsells,
   onUpsellsChange,
-  onToggle 
+  onToggle
 }: UpsellSectionProps) {
-  // Convert dollar price to ICP (ranging 2-10 ICP)
-  const convertToICP = (dollarPrice: number): number => {
-    // Map $15-$50 to 2-10 ICP range
-    // Formula: ICP = 2 + (price - 15) * (10 - 2) / (50 - 15)
-    const minDollar = 15;
-    const maxDollar = 50;
-    const minICP = 2;
-    const maxICP = 10;
-    
-    if (dollarPrice <= minDollar) return minICP;
-    if (dollarPrice >= maxDollar) return maxICP;
-    
-    const icp = minICP + (dollarPrice - minDollar) * (maxICP - minICP) / (maxDollar - minDollar);
-    return Math.round(icp); // Round to whole number
-  };
-
   const handleToggle = (upsell: UpsellItem) => {
     if (onToggle) {
-      // If onToggle is provided, pass the upsell with converted ICP price
-      const upsellWithICP = {
-        ...upsell,
-        price: convertToICP(upsell.price)
-      };
-      onToggle(upsellWithICP);
+      onToggle(upsell);
     } else {
-      // Use onUpsellsChange
       const isSelected = selectedUpsells.some(item => item.id === upsell.id);
       if (isSelected) {
         onUpsellsChange(selectedUpsells.filter(item => item.id !== upsell.id));
       } else {
-        // Convert price to ICP before adding to selected upsells
-        const upsellWithICP = {
-          ...upsell,
-          price: convertToICP(upsell.price)
-        };
-        onUpsellsChange([...selectedUpsells, upsellWithICP]);
+        onUpsellsChange([...selectedUpsells, upsell]);
       }
     }
   };
@@ -218,7 +191,7 @@ export function UpsellSection({
                         </div>
 
                         <div className="text-right ml-4">
-                          <div className="text-lg font-bold text-gray-900">{convertToICP(upsell.price)} ICP</div>
+                          <div className="text-lg font-bold text-gray-900">${upsell.price.toFixed(2)}</div>
                           <div className="text-xs text-gray-500">one-time</div>
                         </div>
                       </div>

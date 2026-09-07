@@ -36,7 +36,7 @@ export function VerificationComplete() {
               </h1>
               <p className="text-center text-gray-600 mb-8 max-w-sm">
                 Congratulations! You've successfully completed the verification
-                process and are now officially a part of the Organaise community
+                process and are now officially a part of the LuvonGig community
                 – where excellence meets opportunity.
               </p>
               <p className="text-[#2ba24c] font-medium">
