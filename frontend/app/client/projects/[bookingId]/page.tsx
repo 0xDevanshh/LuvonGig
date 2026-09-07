@@ -591,7 +591,7 @@ export default function ProjectDetailPage() {
           {/* Left Column - Project Overview */}
           <div className="lg:col-span-2 space-y-6">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="progress">Progress</TabsTrigger>
                 <TabsTrigger value="deliverables">Deliverables</TabsTrigger>
