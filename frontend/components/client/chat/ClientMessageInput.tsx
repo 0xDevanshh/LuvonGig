@@ -1,7 +1,10 @@
 'use client'
 import React, { useState, useRef } from 'react'
-import { Paperclip, Image, Send, Smile, Loader2, Check, X } from 'lucide-react'
+import { Image, Send, Loader2, Check, X } from 'lucide-react'
 import { uploadImageToR2 } from '@/lib/r2-upload-client'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface ClientMessageInputProps {
   onSendMessage: (message: string, options?: {
@@ -101,7 +104,7 @@ export function ClientMessageInput({
   };
 
   return (
-    <div className="p-4 border-t border-gray-200 bg-white">
+    <div className="border-t border-border bg-card p-4">
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <input
           type="file"
@@ -110,11 +113,13 @@ export function ClientMessageInput({
           onChange={handleImageSelect}
           className="hidden"
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || sending}
-          className="p-2 text-gray-500 hover:text-purple-600 rounded-full hover:bg-purple-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 rounded-full text-muted-foreground hover:text-primary"
           title="Send image"
         >
           {uploading ? (
@@ -122,31 +127,25 @@ export function ClientMessageInput({
           ) : (
             <Image size={20} />
           )}
-        </button>
+        </Button>
 
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            placeholder="Type your message..."
-            disabled={uploading || sending}
-            className="w-full py-3 pl-4 pr-10 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
-          />
-        </div>
+        <Input
+          type="text"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Type your message..."
+          disabled={uploading || sending}
+          className="flex-1 rounded-full"
+        />
 
-        <button
+        <Button
           type="submit"
-          className={`p-3 rounded-full transition-colors disabled:cursor-not-allowed flex items-center justify-center ${deliveryStatus === 'sending' || uploading
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : deliveryStatus === 'sent'
-                ? 'bg-green-600 hover:bg-green-700'
-                : deliveryStatus === 'failed'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : (message.trim() || uploading) && !sending && !uploading
-                    ? 'bg-purple-600 hover:bg-purple-700'
-                    : 'bg-gray-300'
-            } text-white`}
+          size="icon"
+          className={cn(
+            'shrink-0 rounded-full',
+            deliveryStatus === 'sent' && 'bg-success text-success-foreground hover:bg-success/90',
+            deliveryStatus === 'failed' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+          )}
           disabled={(!message.trim() && !uploading) || sending || uploading}
           title={
             uploading || deliveryStatus === 'sending'
@@ -167,7 +166,7 @@ export function ClientMessageInput({
           ) : (
             <Send size={20} />
           )}
-        </button>
+        </Button>
       </form>
     </div>
   )

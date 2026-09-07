@@ -2,7 +2,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { ClientMessageInput } from './ClientMessageInput'
 import socketService, { SocketMessage } from '../../../lib/socket-service'
-import { MessageCircle, Wifi, WifiOff } from 'lucide-react'
+import { Wifi, WifiOff } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 interface Message {
   id: string
@@ -481,22 +484,20 @@ export function ClientChatConversation({
 
   if (loading) {
     return (
-      <div className="flex flex-col h-full bg-white">
-        <div className="p-4 border-b border-gray-200 animate-pulse">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-24"></div>
-            </div>
+      <div className="flex h-full flex-col bg-card">
+        <div className="flex items-center gap-3 border-b border-border p-4">
+          <Skeleton className="size-12 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-24" />
           </div>
         </div>
-        <div className="flex-1 p-4 space-y-4">
+        <div className="flex-1 space-y-4 p-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={cn('flex', i % 2 === 0 ? 'justify-end' : 'justify-start')}>
               <div className="max-w-[70%] space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                <div className="h-20 bg-gray-200 rounded-lg"></div>
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-20 rounded-lg" />
               </div>
             </div>
           ))}
@@ -564,52 +565,52 @@ export function ClientChatConversation({
   const chatInfo = getChatInfo()
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex h-full flex-col bg-card">
       {/* Chat Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center gap-3 bg-white">
+      <div className="flex items-center gap-3 border-b border-border bg-card p-4">
         <div className="relative">
           <img
             src={chatInfo.avatar}
             alt={chatInfo.name}
-            className="w-12 h-12 rounded-full object-cover"
+            className="size-12 rounded-full object-cover"
           />
           {chatInfo.status === 'Online' && (
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+            <div className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-card bg-success"></div>
           )}
         </div>
         <div className="flex-1">
           <div className="flex items-center space-x-2">
-            <h3 className="font-medium text-gray-900">{chatInfo.name}</h3>
+            <h3 className="font-medium text-foreground">{chatInfo.name}</h3>
             {chatInfo.type === 'direct' && (
-              <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+              <Badge variant="secondary" className="text-xs">
                 Freelancer
-              </span>
+              </Badge>
             )}
           </div>
           <div className="flex items-center space-x-2 text-sm">
-            <p className="text-green-600">
+            <p className="text-success">
               {chatInfo.status}
             </p>
             {chatInfo.type === 'team' && (
-              <span className="text-gray-600">• {chatInfo.members} members</span>
+              <span className="text-muted-foreground">• {chatInfo.members} members</span>
             )}
             {chatInfo.email && (
-              <span className="text-gray-500 text-xs">• {chatInfo.email}</span>
+              <span className="text-xs text-muted-foreground">• {chatInfo.email}</span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Connection Status Indicator */}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs">
+          <div className="flex items-center gap-1 rounded-full px-2 py-1 text-xs">
             {socketConnected ? (
               <>
-                <Wifi size={12} className="text-green-500" />
-                <span className="text-green-600">Connected</span>
+                <Wifi size={12} className="text-success" />
+                <span className="text-success">Connected</span>
               </>
             ) : (
               <>
-                <WifiOff size={12} className="text-red-500" />
-                <span className="text-red-600">Offline</span>
+                <WifiOff size={12} className="text-destructive" />
+                <span className="text-destructive">Offline</span>
               </>
             )}
           </div>
@@ -617,43 +618,45 @@ export function ClientChatConversation({
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto bg-secondary/40 p-4">
         <div className="space-y-4">
           {finalMessages.map((message, index) => {
             const showDate = index === 0 || message.date !== finalMessages[index - 1]?.date
             return (
               <div key={message.id}>
                 {showDate && (
-                  <div className="flex justify-center my-4">
-                    <span className="bg-white px-3 py-1 rounded-full text-xs text-gray-500 shadow-sm">
+                  <div className="my-4 flex justify-center">
+                    <span className="rounded-full bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
                       {message.date}
                     </span>
                   </div>
                 )}
-                <div className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                <div className={cn('flex', message.sender === 'me' ? 'justify-end' : 'justify-start')}>
                   {message.sender !== 'me' && (
                     <img
                       src={message.senderAvatar}
                       alt={message.senderName}
-                      className="w-8 h-8 rounded-full object-cover mr-2 mt-1"
+                      className="mr-2 mt-1 size-8 rounded-full object-cover"
                     />
                   )}
                   <div className="max-w-[70%]">
                     {message.sender !== 'me' && (
-                      <p className="text-xs text-gray-600 mb-1 ml-1">{message.senderName}</p>
+                      <p className="mb-1 ml-1 text-xs text-muted-foreground">{message.senderName}</p>
                     )}
                     <div
-                      className={`p-3 rounded-lg ${message.sender === 'me'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white border border-gray-200 text-gray-900'
-                        }`}
+                      className={cn(
+                        'rounded-lg p-3',
+                        message.sender === 'me'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-border bg-card text-foreground',
+                      )}
                     >
                       {message.messageType === 'image' && message.fileUrl ? (
                         <div className="space-y-2">
                           <img
                             src={message.fileUrl}
                             alt={message.fileName || 'Image'}
-                            className="max-w-full max-h-64 rounded-lg object-contain"
+                            className="max-h-64 max-w-full rounded-lg object-contain"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=Image+Not+Found';
                             }}
@@ -666,7 +669,7 @@ export function ClientChatConversation({
                         <p>{message.text}</p>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-1 px-1">
+                    <div className="mt-1 px-1 text-xs text-muted-foreground">
                       {message.time}
                     </div>
                   </div>
@@ -674,7 +677,7 @@ export function ClientChatConversation({
                     <img
                       src={myAvatarUrl}
                       alt="Me"
-                      className="w-8 h-8 rounded-full object-cover ml-2 mt-1"
+                      className="ml-2 mt-1 size-8 rounded-full object-cover"
                     />
                   )}
                 </div>

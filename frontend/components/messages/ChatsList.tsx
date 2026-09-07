@@ -1,6 +1,10 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { Search, MessageSquare } from 'lucide-react';
+import { Search, MessageSquare, MapPin, User } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/utils';
 
 interface Chat {
   contact: string
@@ -49,8 +53,8 @@ export function ChatsList({
   // Early return if no userEmail - show message instead of loading
   if (!userEmail) {
     return (
-      <div className="flex flex-col h-full items-center justify-center p-8">
-        <p className="text-gray-500 text-center">Please log in to view messages</p>
+      <div className="flex h-full items-center justify-center p-8">
+        <p className="text-center text-muted-foreground">Please log in to view messages</p>
       </div>
     )
   }
@@ -225,21 +229,17 @@ export function ChatsList({
   const chatsToDisplay = allContacts
   if (loading) {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex h-full flex-col">
         <div className="p-4">
-          <div className="animate-pulse">
-            <div className="h-12 bg-gray-200 rounded-full mb-4"></div>
-          </div>
+          <Skeleton className="h-12 rounded-full" />
         </div>
-        <div className="flex-1 p-4 space-y-4">
+        <div className="flex-1 space-y-4 p-4">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                </div>
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="size-12 shrink-0 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-3/4" />
               </div>
             </div>
           ))}
@@ -249,20 +249,18 @@ export function ChatsList({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* Search Bar */}
       <div className="p-4">
         <div className="relative">
-          <input
+          <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
             type="text"
             placeholder="Search your messages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-3 pl-4 pr-12 rounded-full border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="rounded-full pl-9"
           />
-          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-amber-500 rounded-full p-2">
-            <Search size={18} className="text-white" />
-          </div>
         </div>
       </div>
 
@@ -273,62 +271,53 @@ export function ChatsList({
           <div
             key={chat.id}
             onClick={() => onSelectChat(chat.id)}
-            className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 ${
-              selectedChatId === chat.id ? 'bg-gray-50' : ''
-            }`}
+            className={cn(
+              'flex cursor-pointer items-center gap-3 p-4 hover:bg-accent',
+              selectedChatId === chat.id && 'bg-accent',
+            )}
           >
             <div className="relative">
               <img
                 src={chat.avatar}
                 alt={chat.name}
-                className="w-12 h-12 rounded-full object-cover"
+                className="size-12 rounded-full object-cover"
               />
               {chat.unread > 0 && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <div className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
                   {chat.unread}
                 </div>
               )}
               {chat.type === 'chat' && (chat as any).profile && (
-                <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-green-500 text-white text-xs rounded-full flex items-center justify-center">
-                  👤
+                <div className="absolute -bottom-1 -left-1 flex size-4 items-center justify-center rounded-full bg-success text-white">
+                  <User className="size-2.5" />
                 </div>
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium text-gray-900 truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="truncate font-medium text-foreground">
                   {chat.name}
                 </h3>
-                <span className="text-xs text-gray-500">{chat.time}</span>
+                <span className="text-xs text-muted-foreground">{chat.time}</span>
               </div>
-              <p className="text-sm text-gray-500 truncate">
+              <p className="truncate text-sm text-muted-foreground">
                 {chat.lastMessage}
               </p>
               {chat.type === 'chat' && (chat as any).profile && (chat as any).profile.location && (
-                <p className="text-xs text-gray-400 mt-1">
-                  📍 {(chat as any).profile.location}
+                <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="size-3" /> {(chat as any).profile.location}
                 </p>
               )}
             </div>
           </div>
         ))
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center p-8">
-              <MessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-              <p className="text-sm text-gray-500 mb-4">Clients will appear here after booking your services</p>
-              <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
-                <p className="font-medium mb-1">💬 How clients find you:</p>
-                <ol className="text-left text-xs space-y-1">
-                  <li>1. Clients browse your services</li>
-                  <li>2. They book your service</li>
-                  <li>3. Chat automatically starts</li>
-                  <li>4. Discuss project details here</li>
-                </ol>
-              </div>
-            </div>
-          </div>
+          <EmptyState
+            className="h-full justify-center border-none"
+            icon={MessageSquare}
+            title="No messages yet"
+            description="Clients will appear here after booking your services."
+          />
         )}
       </div>
     </div>

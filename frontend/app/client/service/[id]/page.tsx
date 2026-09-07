@@ -3,9 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { getUserProfileByEmail } from '@/lib/user-profile';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Save, Share2, Check, Star, Clock, DollarSign, CreditCard } from 'lucide-react';
-import { useServices } from '@/hooks/useServices';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Save, Share2, Star, CreditCard, PackageSearch } from 'lucide-react';
 import { useBookPackage } from '@/hooks/usePackages';
+import { formatMoney, toMajorUnits } from '@/lib/currency';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/utils';
 export default function ServiceDetails() {
   const navigate = useRouter();
   const { id } = useParams<{ id: string }>();
@@ -258,20 +263,30 @@ export default function ServiceDetails() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="container mx-auto grid grid-cols-1 gap-8 px-4 py-6 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
   if (!service) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Service Not Found</h2>
-        <p className="text-gray-600 mb-4">The service you're looking for doesn't exist.</p>
-        <Link href="/client/browse-services" className="text-blue-600 hover:text-blue-700">
-          Browse other services
-        </Link>
+      <div className="p-6">
+        <EmptyState
+          icon={PackageSearch}
+          title="Service not found"
+          description="The service you're looking for doesn't exist or may have been removed."
+          action={
+            <Button asChild>
+              <Link href="/client/browse-services">Browse other services</Link>
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -327,7 +342,8 @@ export default function ServiceDetails() {
     tiers: service.packages ? service.packages.reduce((acc: any, pkg: any) => {
       acc[pkg.tier.toLowerCase()] = {
         name: pkg.tier,
-        price: pkg.price_minor / 100,
+        price: toMajorUnits(pkg.price_minor, pkg.currency),
+        priceLabel: formatMoney(pkg.price_minor, pkg.currency),
         description: pkg.description,
         deliveryDays: pkg.delivery_days,
         deliveryTimeline: pkg.delivery_timeline || `${pkg.delivery_days} days`,
@@ -429,30 +445,28 @@ export default function ServiceDetails() {
   const goToNextImage = () => {
     setCurrentImageIndex(prev => prev === serviceData.images.length - 1 ? 0 : prev + 1);
   };
-  return <div className="min-h-screen bg-white">
-    {/* Header */}
-
+  return <div className="min-h-screen bg-background">
     <div className="container mx-auto px-4 py-6">
-      <button onClick={handleBack} className="flex items-center text-gray-600 mb-4">
+      <button onClick={handleBack} className="mb-4 flex items-center text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft size={20} />
         <span>Back</span>
       </button>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h1 className="text-xl md:text-2xl font-semibold mb-4">
+          <h1 className="mb-4 font-heading text-h1 font-semibold text-foreground">
             {serviceData.title}
           </h1>
-          <div className="flex items-center mb-6">
-            <img src={serviceData.seller.avatar} alt={serviceData.seller.name} className="w-10 h-10 rounded-full mr-3" />
+          <div className="mb-6 flex items-center">
+            <img src={serviceData.seller.avatar} alt={serviceData.seller.name} className="mr-3 size-10 rounded-full" />
             <div>
-              <p className="font-medium">{serviceData.seller.name}</p>
-              <div className="flex flex-wrap items-center text-sm text-gray-600">
+              <p className="font-medium text-foreground">{serviceData.seller.name}</p>
+              <div className="flex flex-wrap items-center text-sm text-muted-foreground">
                 <span>
                   {serviceData.seller.location} - {serviceData.seller.joinedYear}
                 </span>
-                <div className="flex items-center ml-2">
-                  <span className="text-yellow-500">★</span>
-                  <span className="ml-1">{serviceData.seller.rating}</span>
+                <div className="ml-2 flex items-center">
+                  <Star className="size-3.5 fill-warning text-warning" />
+                  <span className="ml-1 text-foreground">{serviceData.seller.rating}</span>
                   <span className="ml-1">({serviceData.seller.reviews})</span>
                 </div>
                 {activeBookingsCount > 0 && (
@@ -465,55 +479,55 @@ export default function ServiceDetails() {
           </div>
           {/* Image gallery */}
           <div className="mb-8">
-            <div className="relative rounded-lg overflow-hidden">
-              <img src={serviceData.images[currentImageIndex]} alt="Service preview" className="w-full h-64 md:h-96 object-cover" />
+            <div className="relative overflow-hidden rounded-lg">
+              <img src={serviceData.images[currentImageIndex]} alt="Service preview" className="h-64 w-full object-cover md:h-96" />
               {serviceData.images.length > 1 && <>
-                <button onClick={goToPreviousImage} className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-md hover:bg-gray-100" aria-label="Previous image">
+                <button onClick={goToPreviousImage} className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-card p-2 shadow-md hover:bg-accent" aria-label="Previous image">
                   <ChevronLeft size={20} />
                 </button>
-                <button onClick={goToNextImage} className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-md hover:bg-gray-100" aria-label="Next image">
+                <button onClick={goToNextImage} className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-card p-2 shadow-md hover:bg-accent" aria-label="Next image">
                   <ChevronRight size={20} />
                 </button>
                 {/* Image pagination dots */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                  {serviceData.images.map((_: any, index: number) => <button key={index} onClick={() => setCurrentImageIndex(index)} className={`w-2 h-2 rounded-full ${currentImageIndex === index ? 'bg-white' : 'bg-gray-400/60'}`} aria-label={`Go to image ${index + 1}`} />)}
+                <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 space-x-2">
+                  {serviceData.images.map((_: any, index: number) => <button key={index} onClick={() => setCurrentImageIndex(index)} className={cn('size-2 rounded-full', currentImageIndex === index ? 'bg-card' : 'bg-card/50')} aria-label={`Go to image ${index + 1}`} />)}
                 </div>
               </>}
             </div>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {serviceData.images.map((image: any, index: number) => <button key={index} onClick={() => setCurrentImageIndex(index)} className={`rounded-lg overflow-hidden border-2 ${currentImageIndex === index ? 'border-blue-500' : 'border-transparent'}`}>
-                <img src={image} alt={`Thumbnail ${index + 1}`} className="w-full h-16 object-cover" />
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {serviceData.images.map((image: any, index: number) => <button key={index} onClick={() => setCurrentImageIndex(index)} className={cn('overflow-hidden rounded-lg border-2', currentImageIndex === index ? 'border-primary' : 'border-transparent')}>
+                <img src={image} alt={`Thumbnail ${index + 1}`} className="h-16 w-full object-cover" />
               </button>)}
             </div>
           </div>
           {/* Description */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Description</h2>
-            <p className="text-gray-700 mb-4">{serviceData.description}</p>
-            <ul className="list-disc pl-5 space-y-1 mb-6">
-              {serviceData.features.map((feature: any, index: number) => <li key={index} className="text-gray-700">
+            <h2 className="mb-4 font-heading text-h2 font-semibold text-foreground">Description</h2>
+            <p className="mb-4 text-foreground">{serviceData.description}</p>
+            <ul className="mb-6 list-disc space-y-1 pl-5">
+              {serviceData.features.map((feature: any, index: number) => <li key={index} className="text-foreground">
                 {feature}
               </li>)}
             </ul>
-            {serviceData.additionalInfo.map((info: any, index: number) => <p key={index} className="text-gray-700 mb-2">
+            {serviceData.additionalInfo.map((info: any, index: number) => <p key={index} className="mb-2 text-foreground">
               {info}
             </p>)}
           </div>
           {/* Tier Comparison */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Tier Comparison</h2>
+            <h2 className="mb-4 font-heading text-h2 font-semibold text-foreground">Tier Comparison</h2>
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+              <table className="min-w-full border-collapse text-sm">
                 <thead>
                   <tr>
-                    {serviceData.tierComparison.headers.map((header: any, index: number) => <th key={index} className="border border-gray-200 px-4 py-2 text-left bg-gray-50">
+                    {serviceData.tierComparison.headers.map((header: any, index: number) => <th key={index} className="border border-border bg-secondary px-4 py-2 text-left text-foreground">
                       {header}
                     </th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {serviceData.tierComparison.rows.map((row: any, rowIndex: number) => <tr key={rowIndex}>
-                    {row.map((cell: any, cellIndex: number) => <td key={cellIndex} className="border border-gray-200 px-4 py-2">
+                    {row.map((cell: any, cellIndex: number) => <td key={cellIndex} className="border border-border px-4 py-2 text-foreground">
                       {cell}
                     </td>)}
                   </tr>)}
@@ -523,55 +537,55 @@ export default function ServiceDetails() {
           </div>
           {/* FAQ */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="mb-4 font-heading text-h2 font-semibold text-foreground">
               Frequently Asked Questions
             </h2>
             <div className="space-y-4">
               {serviceData.faqs.length > 0 ? (
-                serviceData.faqs.map((faq: any, index: number) => <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-                  <button className="flex items-center justify-between w-full px-4 py-3 bg-white text-left" onClick={() => toggleFaq(index)}>
-                    <span className={`font-medium ${expandedFaq === index ? 'text-green-600' : 'text-gray-800'}`}>
+                serviceData.faqs.map((faq: any, index: number) => <div key={index} className="overflow-hidden rounded-lg border border-border">
+                  <button className="flex w-full items-center justify-between bg-card px-4 py-3 text-left" onClick={() => toggleFaq(index)}>
+                    <span className={cn('font-medium', expandedFaq === index ? 'text-primary' : 'text-foreground')}>
                       {faq.question}
                     </span>
-                    {expandedFaq === index ? <ChevronUp size={20} className="text-green-600" /> : <ChevronDown size={20} />}
+                    {expandedFaq === index ? <ChevronUp size={20} className="text-primary" /> : <ChevronDown size={20} className="text-muted-foreground" />}
                   </button>
-                  {expandedFaq === index && <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-                    <p className="text-gray-700">{faq.answer}</p>
+                  {expandedFaq === index && <div className="border-t border-border bg-secondary px-4 py-3">
+                    <p className="text-foreground">{faq.answer}</p>
                   </div>}
                 </div>)
               ) : (
-                <p className="text-gray-600">No FAQs available for this service.</p>
+                <p className="text-muted-foreground">No FAQs available for this service.</p>
               )}
             </div>
           </div>
           {/* Comments and Rating */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="mb-4 font-heading text-h2 font-semibold text-foreground">
               Comments And Rating
             </h2>
-            <div className="flex items-center mb-4">
-              <span className="text-xl font-bold mr-2">
+            <div className="mb-4 flex items-center">
+              <span className="mr-2 text-xl font-bold text-foreground">
                 {serviceData.ratings.average}
               </span>
-              <div className="flex text-yellow-400">
-                {'★★★★★'.split('').map((_, i) => <span key={i} className={i < Math.floor(serviceData.ratings.average) ? 'text-yellow-400' : 'text-gray-300'}>
+              <div className="flex">
+                {'★★★★★'.split('').map((_, i) => <span key={i} className={i < Math.floor(serviceData.ratings.average) ? 'text-warning' : 'text-muted'}>
                   ★
                 </span>)}
               </div>
-              <span className="ml-2 text-gray-600">
+              <span className="ml-2 text-muted-foreground">
                 ({serviceData.ratings.total} ratings)
               </span>
             </div>
             {/* Rating distribution */}
-            <div className="space-y-2 mb-6">
+            <div className="mb-6 space-y-2">
               {serviceData.ratings.distribution.map((dist: any) => <div key={dist.stars} className="flex items-center">
-                <span className="w-8">{dist.stars} ★</span>
-                <div className="flex-1 h-2 bg-gray-200 rounded-full mx-2">
-                  <div className="h-2 bg-green-500 rounded-full" style={{
+                <span className="w-8 text-foreground">{dist.stars} ★</span>
+                <div className="mx-2 h-2 flex-1 rounded-full bg-secondary">
+                  <div className="h-2 rounded-full bg-primary" style={{
                     width: `${dist.percentage}%`
                   }}></div>
                 </div>
-                <span className="w-8 text-right text-gray-600">
+                <span className="w-8 text-right text-muted-foreground">
                   {dist.percentage}%
                 </span>
               </div>)}
@@ -579,62 +593,65 @@ export default function ServiceDetails() {
             {/* Comments */}
             <div className="space-y-4">
               {serviceData.comments.length > 0 ? (
-                serviceData.comments.map((comment: any, index: number) => <div key={index} className="border-b border-gray-200 pb-4">
-                  <div className="flex items-center mb-2">
-                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop" alt={comment.user} className="w-10 h-10 rounded-full mr-3" />
+                serviceData.comments.map((comment: any, index: number) => <div key={index} className="border-b border-border pb-4">
+                  <div className="mb-2 flex items-center">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop" alt={comment.user} className="mr-3 size-10 rounded-full" />
                     <div>
-                      <p className="font-medium">{comment.user}</p>
-                      <div className="flex text-yellow-400">
+                      <p className="font-medium text-foreground">{comment.user}</p>
+                      <div className="flex text-warning">
                         {'★'.repeat(comment.rating)}
                       </div>
                     </div>
                   </div>
-                  <p className="text-gray-700">{comment.comment}</p>
+                  <p className="text-foreground">{comment.comment}</p>
                 </div>)
               ) : (
-                <p className="text-gray-600">No reviews yet for this service. Be the first to leave a review!</p>
+                <p className="text-muted-foreground">No reviews yet for this service. Be the first to leave a review!</p>
               )}
             </div>
           </div>
           {/* Similar Services */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">
+            <h2 className="mb-4 font-heading text-h2 font-semibold text-foreground">
               Explore Similar Services
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {serviceData.similarServices.length > 0 ? (
-                serviceData.similarServices.map((similar: any) => <div key={similar.service_id} className="border border-gray-200 rounded-lg overflow-hidden">
+                serviceData.similarServices.map((similar: any) => <div key={similar.service_id} className="overflow-hidden rounded-lg border border-border">
                   <div className="relative h-48">
                     <img
                       src={similar.cover_image_url || (similar.portfolio_images && similar.portfolio_images.length > 0 ? similar.portfolio_images[0] : "/default-service.svg")}
                       alt={similar.title}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   </div>
                   <div className="p-4">
-                    <div className="flex items-center mb-2">
-                      <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=100&auto=format&fit=crop" alt={similar.freelancer_email} className="w-8 h-8 rounded-full mr-2" />
-                      <span>{similar.freelancer_email ? similar.freelancer_email.split('@')[0] : 'Unknown'}</span>
+                    <div className="mb-2 flex items-center">
+                      <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=100&auto=format&fit=crop" alt={similar.freelancer_email} className="mr-2 size-8 rounded-full" />
+                      <span className="text-foreground">{similar.freelancer_email ? similar.freelancer_email.split('@')[0] : 'Unknown'}</span>
                     </div>
-                    <p className="text-sm mb-2 line-clamp-2">
+                    <p className="mb-2 line-clamp-2 text-sm text-foreground">
                       {similar.title}
                     </p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <span className="text-yellow-400">★</span>
-                        <span className="ml-1">{similar.rating_avg}</span>
-                        <span className="ml-1 text-gray-600">
+                        <Star className="size-3.5 fill-warning text-warning" />
+                        <span className="ml-1 text-foreground">{similar.rating_avg}</span>
+                        <span className="ml-1 text-muted-foreground">
                           ({similar.total_orders})
                         </span>
                       </div>
-                      <div className="font-bold">
-                        ${similar.packages && similar.packages.length > 0
-                          ? Math.min(...similar.packages.map((p: any) => p.price_minor / 100)).toFixed(2)
-                          : '0.00'
+                      <div className="font-bold text-foreground">
+                        {similar.packages && similar.packages.length > 0
+                          ? formatMoney(
+                              Math.min(...similar.packages.map((p: any) => Number(p.price_minor))),
+                              similar.packages[0]?.currency,
+                            )
+                          : '—'
                         }
                       </div>
                     </div>
-                    <Link href={`/client/service/${similar.service_id}`} className="flex items-center text-blue-500 mt-2">
+                    <Link href={`/client/service/${similar.service_id}`} className="mt-2 flex items-center text-primary hover:underline">
                       <span>View</span>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-1">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -644,106 +661,108 @@ export default function ServiceDetails() {
                   </div>
                 </div>)
               ) : (
-                <p className="text-gray-600 col-span-3">No similar services found.</p>
+                <p className="col-span-3 text-muted-foreground">No similar services found.</p>
               )}
             </div>
           </div>
         </div>
         {/* Right sidebar */}
         <div className="lg:col-span-1">
-          <div className="sticky top-6 bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex justify-between mb-4">
-              <button className="flex items-center text-gray-600">
-                <Save size={18} className="mr-1" />
+          <div className="sticky top-6 rounded-lg border border-border bg-card p-6">
+            <div className="mb-4 flex justify-between">
+              <button className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+                <Save size={16} className="mr-1" />
                 <span>Save</span>
               </button>
-              <button className="flex items-center text-gray-600">
-                <Share2 size={18} className="mr-1" />
+              <button className="flex items-center text-sm text-muted-foreground hover:text-foreground">
+                <Share2 size={16} className="mr-1" />
                 <span>Share</span>
               </button>
             </div>
-            <h3 className="font-medium mb-4">Select service tier</h3>
-            <div className="space-y-3 mb-6">
+            <h3 className="mb-4 font-heading text-h3 font-semibold text-foreground">Select service tier</h3>
+            <div className="mb-6 space-y-3">
               {service.packages && service.packages.length > 0 ? (
                 service.packages.map((pkg: any) => {
                   const tierName = pkg.tier.toLowerCase();
-                  const price = pkg.price_minor / 100;
                   return (
                     <button
                       key={pkg.package_id}
-                      className={`w-full py-2 px-4 rounded-full border ${selectedTier === tierName ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                        }`}
+                      className={cn(
+                        'w-full rounded-full border px-4 py-2 text-sm transition-colors',
+                        selectedTier === tierName
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-foreground hover:bg-accent',
+                      )}
                       onClick={() => setSelectedTier(tierName)}
                     >
-                      {pkg.tier} (${price})
+                      {pkg.tier} ({formatMoney(pkg.price_minor, pkg.currency)})
                     </button>
                   );
                 })
               ) : (
-                <p className="text-gray-600">No packages available for this service.</p>
+                <p className="text-sm text-muted-foreground">No packages available for this service.</p>
               )}
             </div>
-            <div className="space-y-4 border-t border-gray-200 pt-4">
-              <div className="flex justify-between items-start gap-2">
-                <span className="flex-shrink-0">Service</span>
-                <span className="text-right text-sm text-gray-600 break-words">
+            <div className="space-y-4 border-t border-border pt-4 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <span className="shrink-0 text-foreground">Service</span>
+                <span className="break-words text-right text-muted-foreground">
                   {serviceData.title}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Description</span>
-                <p className="text-sm text-gray-600 break-words whitespace-normal">
+                <span className="font-medium text-foreground">Description</span>
+                <p className="whitespace-normal break-words text-muted-foreground">
                   {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.description || 'Service package'}
                 </p>
               </div>
               <div className="flex justify-between">
-                <span>Delivery Timeline</span>
-                <span className="text-right">
+                <span className="text-foreground">Delivery Timeline</span>
+                <span className="text-right text-muted-foreground">
                   {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.deliveryTimeline || 'N/A'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Revisions</span>
-                <span>
+                <span className="text-foreground">Revisions</span>
+                <span className="text-muted-foreground">
                   {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.revisions || 'N/A'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Amount</span>
-                <span>
-                  $
-                  {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.price || '0.00'}
+                <span className="text-foreground">Amount</span>
+                <span className="font-semibold text-foreground">
+                  {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.priceLabel || '—'}
                 </span>
               </div>
             </div>
 
             {/* Special Instructions */}
-            <div className="space-y-4 border-t border-gray-200 pt-4">
+            <div className="space-y-4 border-t border-border pt-4">
               <div>
-                <label htmlFor="specialInstructions" className="block text-sm font-medium text-gray-700 mb-2">
-                  Special Instructions <span className="text-gray-400">(Optional)</span>
+                <label htmlFor="specialInstructions" className="mb-2 block text-sm font-medium text-foreground">
+                  Special Instructions <span className="text-muted-foreground">(Optional)</span>
                 </label>
-                <textarea
+                <Textarea
                   id="specialInstructions"
                   value={bookingNotes}
                   onChange={(e) => setBookingNotes(e.target.value)}
                   placeholder="Please provide any special requirements, deadlines, or specific instructions for the freelancer... (Optional)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="resize-none"
                   rows={4}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Optional: Help the freelancer understand your specific requirements
                 </p>
               </div>
             </div>
 
-            <button
-              onClick={handleContinue}
-              className="w-full py-3 bg-purple-600 text-white rounded-lg mt-6 hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
-            >
+            <Button onClick={handleContinue} className="mt-6 w-full" size="lg">
               <CreditCard size={18} />
-              <span>Continue to Payment (${serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.price || '0.00'})</span>
-            </button>
+              <span>
+                Continue to Payment (
+                {serviceData.tiers[selectedTier as keyof typeof serviceData.tiers]?.priceLabel || '—'})
+              </span>
+            </Button>
           </div>
         </div>
       </div>

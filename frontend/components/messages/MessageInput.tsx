@@ -1,7 +1,9 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react';
-import { Paperclip, Image, Send, Loader2 } from 'lucide-react';
+import { Image, Send, Loader2 } from 'lucide-react';
 import { uploadImageToR2 } from '@/lib/r2-upload-client';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface MessageInputProps {
   onSendMessage: (message: string, options?: {
@@ -114,7 +116,7 @@ export function MessageInput({
     };
   }, []);
   return (
-    <div className="p-4 border-t border-gray-200 bg-white">
+    <div className="border-t border-border bg-card p-4">
       <form onSubmit={handleSubmit} className="flex items-center gap-2">
         <input
           type="file"
@@ -123,11 +125,13 @@ export function MessageInput({
           onChange={handleImageSelect}
           className="hidden"
         />
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="shrink-0 rounded-full text-muted-foreground"
           title="Send image"
         >
           {uploading ? (
@@ -135,24 +139,23 @@ export function MessageInput({
           ) : (
             <Image size={20} />
           )}
-        </button>
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={message}
-            onChange={e => handleTyping(e.target.value)}
-            placeholder="Type a message here"
-            disabled={uploading}
-            className="w-full py-3 pl-4 pr-10 rounded-full border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-          />
-        </div>
-        <button
+        </Button>
+        <Input
+          type="text"
+          value={message}
+          onChange={e => handleTyping(e.target.value)}
+          placeholder="Type a message here"
+          disabled={uploading}
+          className="flex-1 rounded-full"
+        />
+        <Button
           type="submit"
-          className="p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          size="icon"
+          className="shrink-0 rounded-full"
           disabled={(!message.trim() && !uploading) || uploading}
         >
           <Send size={20} />
-        </button>
+        </Button>
       </form>
     </div>
   );
