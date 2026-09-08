@@ -17,6 +17,7 @@ import { jobsRouter, acceptProposalRouter } from './modules/jobs/routes.js';
 import { hackathonsRouter, teamsRouter, submissionsRouter } from './modules/hackathons/routes.js';
 import { paymentsRouter } from './modules/payments/routes.js';
 import { purposesRouter } from './modules/payments/purposes.js';
+import { expertsRouter, expertBookingsRouter } from './modules/experts/routes.js';
 import { chatRouter, chatHealthRouter } from './modules/chat/routes.js';
 import { webhookRouter } from './modules/payments/webhook.js';
 
@@ -75,6 +76,8 @@ export function createApp() {
 
   app.use('/api/payments', paymentsRouter);
   app.use('/api/payments', purposesRouter);
+  app.use('/api/experts', expertsRouter);
+  app.use('/api/expert-bookings', expertBookingsRouter);
   app.use('/api/chat/health', chatHealthRouter);
   app.use('/api/chat', chatRouter);
 

@@ -4,11 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useUserContext } from '@/contexts/UserContext';
 import {
-    Award,
-    DollarSign,
-    Calendar,
     ArrowLeft,
     CheckCircle2,
     ShieldCheck,
@@ -19,30 +15,54 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import StripeCheckout from '@/components/payment/StripeCheckout';
+import { formatMoney } from '@/lib/currency';
+
+interface Expert {
+    id: string;
+    name: string;
+    avatar_url: string;
+    headline: string;
+    bio: string;
+    expertise: string[];
+    hourly_rate_minor: string;
+    currency: string;
+}
+
+const DURATIONS = [30, 60, 90] as const;
+
+function defaultScheduledAt() {
+    // A day out, at the top of the next hour: a sane default that's always
+    // in the future, without forcing the client to pick before seeing the form.
+    const d = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    // <input type="datetime-local"> wants local time with no timezone suffix.
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function ExpertDetailsPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { profile } = useUserContext();
     const [loading, setLoading] = useState(true);
-    const [expert, setExpert] = useState<any>(null);
+    const [expert, setExpert] = useState<Expert | null>(null);
     const [isPayOpen, setIsPayOpen] = useState(false);
+    const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt());
+    const [durationMinutes, setDurationMinutes] = useState<number>(60);
+    const [notes, setNotes] = useState('');
 
     const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
         const fetchExpert = async () => {
             try {
-                const response = await fetch('/api/expert/list');
+                const response = await fetch(`/api/experts/${id}`);
                 const data = await response.json();
                 if (data.success) {
-                    const found = data.experts.find((e: any) => e.id.toString() === id);
-                    if (found) {
-                        setExpert(found);
-                    } else {
-                        toast.error('Expert not found');
-                        router.push('/experts');
-                    }
+                    setExpert(data.data);
+                } else {
+                    toast.error('Expert not found');
+                    router.push('/experts');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -51,7 +71,7 @@ export default function ExpertDetailsPage() {
             }
         };
         fetchExpert();
-    }, [id]);
+    }, [id, router]);
 
     if (loading) {
         return (
@@ -63,41 +83,13 @@ export default function ExpertDetailsPage() {
 
     if (!expert) return null;
 
-    const handlePaymentSuccess = async (result: any) => {
-        console.log('Payment success callback from widget:', result);
-        toast.success('Payment Successful! Confirming your booking...');
-
-        // Robust ID extraction
-        const paymentId = result.paymentId || result.id || 'sandbox_success';
-        const transactionId = result.transactionId || result.hash || 'sandbox_tx';
-
-        try {
-            const response = await fetch('/api/expert/book', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    expert_id: expert.id,
-                    payment_id: paymentId,
-                    transaction_id: transactionId,
-                    amount_icp: expert.session_amount_icp
-                })
-            });
-
-            const data = await response.json();
-            console.log('Booking response:', data);
-            if (data.success) {
-                setShowSuccess(true);
-                toast.success('Booking confirmed! check your mail.', { duration: 5000 });
-            } else {
-                console.error('Booking failed:', data.error);
-                toast.error(`Payment verified but booking failed: ${data.error || 'Please contact support'}.`);
-            }
-        } catch (error) {
-            console.error('Booking confirmation error:', error);
-            toast.error('Failed to confirm booking.');
-        } finally {
-            setIsPayOpen(false);
-        }
+    // Payment is confirmed by Stripe's webhook, not by this callback — this
+    // only reflects that the card was charged. See client/payment/[id]/page.tsx
+    // for the same pattern.
+    const handlePaymentSuccess = () => {
+        setIsPayOpen(false);
+        setShowSuccess(true);
+        toast.success('Payment submitted!', { duration: 5000 });
     };
 
     if (showSuccess) {
@@ -108,12 +100,12 @@ export default function ExpertDetailsPage() {
                         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                             <CheckCircle2 className="text-green-600 w-10 h-10" />
                         </div>
-                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Session Booked!</h2>
+                        <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Payment Submitted!</h2>
                         <p className="text-gray-500 mb-8 leading-relaxed">
-                            Your session with <span className="text-purple-600 font-bold">{expert.name}</span> has been successfully confirmed.
+                            Your session with <span className="text-purple-600 font-bold">{expert.name}</span> is being confirmed.
                             <br /><br />
                             <span className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold">
-                                Please check your email for the Calendly invite!
+                                You'll get a confirmation email once the payment clears.
                             </span>
                         </p>
                         <div className="space-y-3 w-full">
@@ -137,6 +129,8 @@ export default function ExpertDetailsPage() {
         );
     }
 
+    const sessionAmountMinor = (BigInt(expert.hourly_rate_minor) * BigInt(durationMinutes)) / BigInt(60);
+
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-6">
             <div className="max-w-5xl mx-auto">
@@ -157,8 +151,8 @@ export default function ExpertDetailsPage() {
                             <div className="relative z-10">
                                 <div className="flex items-center gap-6 mb-8">
                                     <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-gray-100">
-                                        {expert.picture_url ? (
-                                            <img src={expert.picture_url} alt={expert.name} className="w-full h-full object-cover" />
+                                        {expert.avatar_url ? (
+                                            <img src={expert.avatar_url} alt={expert.name} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
                                                 <User className="text-gray-300" size={48} />
@@ -172,7 +166,7 @@ export default function ExpertDetailsPage() {
                                             <span className="text-xs font-bold uppercase tracking-wider">Top Expert</span>
                                         </div>
                                         <p className="text-purple-600 font-bold mt-2 bg-purple-50 px-3 py-1 rounded-full text-sm inline-block">
-                                            {expert.expertise}
+                                            {expert.expertise.join(', ') || expert.headline}
                                         </p>
                                     </div>
                                 </div>
@@ -183,7 +177,7 @@ export default function ExpertDetailsPage() {
                                         About the Expert
                                     </h3>
                                     <p className="text-gray-600 leading-relaxed text-lg">
-                                        {expert.description || "Top-rated expert providing specialized sessions and guidance in their field."}
+                                        {expert.bio || "Top-rated expert providing specialized sessions and guidance in their field."}
                                     </p>
                                 </div>
                             </div>
@@ -223,26 +217,65 @@ export default function ExpertDetailsPage() {
                                     Investment
                                 </CardTitle>
                                 <div className="text-center">
-                                    <span className="text-5xl font-black">{parseFloat(expert.session_amount_icp).toFixed(2)}</span>
-                                    <span className="text-xl font-bold ml-2 opacity-60">ICP</span>
+                                    <span className="text-5xl font-black">
+                                        {formatMoney(sessionAmountMinor.toString(), expert.currency)}
+                                    </span>
                                 </div>
                                 <p className="text-center text-xs mt-4 opacity-50 font-medium italic">
-                                    Includes full preparation materials and session recording
+                                    {formatMoney(expert.hourly_rate_minor, expert.currency)}/hr, billed for the time you book
                                 </p>
                             </CardHeader>
                             <CardContent className="p-10">
-                                <div className="space-y-6 mb-10">
+                                <div className="space-y-5 mb-8">
+                                    <div>
+                                        <label htmlFor="scheduled-at" className="block text-sm font-medium text-gray-700 mb-1">
+                                            When would you like to meet?
+                                        </label>
+                                        <input
+                                            id="scheduled-at"
+                                            type="datetime-local"
+                                            value={scheduledAt}
+                                            onChange={(e) => setScheduledAt(e.target.value)}
+                                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+                                            Duration
+                                        </label>
+                                        <select
+                                            id="duration"
+                                            value={durationMinutes}
+                                            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        >
+                                            {DURATIONS.map((d) => (
+                                                <option key={d} value={d}>{d} minutes</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                                            What would you like to discuss? <span className="text-gray-400">(optional)</span>
+                                        </label>
+                                        <textarea
+                                            id="notes"
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
+                                            rows={3}
+                                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3 mb-8">
                                     <div className="flex items-center gap-3 text-sm text-gray-600 font-medium">
                                         <CheckCircle2 size={18} className="text-green-500" />
-                                        1-Hour Individual Session
+                                        1:1 Individual Session
                                     </div>
                                     <div className="flex items-center gap-3 text-sm text-gray-600 font-medium">
                                         <CheckCircle2 size={18} className="text-green-500" />
-                                        Instant Calendly Invite
-                                    </div>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600 font-medium">
-                                        <CheckCircle2 size={18} className="text-green-500" />
-                                        Actionable Strategy Plan
+                                        You arrange the meeting link with the expert after booking
                                     </div>
                                 </div>
 
@@ -255,7 +288,7 @@ export default function ExpertDetailsPage() {
 
                                 <div className="mt-8 flex items-center justify-center gap-2 opacity-40">
                                     <ShieldCheck size={14} />
-                                    <p className="text-[10px] uppercase font-bold tracking-widest">Secure ICPay Transaction</p>
+                                    <p className="text-[10px] uppercase font-bold tracking-widest">Secure Card Payment</p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -265,9 +298,12 @@ export default function ExpertDetailsPage() {
                                 endpoint="/api/payments/expert-session"
                                 payload={{
                                     expert_id: expert.id,
-                                    scheduled_at: new Date().toISOString(),
-                                    duration_minutes: 60,
+                                    scheduled_at: new Date(scheduledAt).toISOString(),
+                                    duration_minutes: durationMinutes,
+                                    notes: notes.trim() || undefined,
                                 }}
+                                amountMinor={sessionAmountMinor.toString()}
+                                currency={expert.currency}
                                 onSuccess={handlePaymentSuccess}
                                 onError={() => setIsPayOpen(false)}
                             />

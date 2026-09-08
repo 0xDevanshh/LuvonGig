@@ -1,50 +1,41 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserContext } from '@/contexts/UserContext';
+import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'react-hot-toast';
-import { User, Award, DollarSign, Link as LinkIcon, FileText, Camera, ArrowRight } from 'lucide-react';
+import { Award, DollarSign, FileText, ArrowRight, Landmark } from 'lucide-react';
+import { toMajorUnits, toMinorUnits } from '@/lib/currency';
 
 export default function ExpertRegistration() {
     const router = useRouter();
-    const { profile, refreshProfile } = useUserContext();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
 
     const [formData, setFormData] = useState({
-        name: '',
+        headline: '',
         expertise: '',
-        session_amount_icp: '',
-        calendly_link: '',
-        description: '',
-        picture_url: ''
+        hourlyRate: '',
+        bio: '',
     });
 
     useEffect(() => {
         const fetchExpertProfile = async () => {
             try {
-                const response = await fetch('/api/expert/register');
+                const response = await fetch('/api/experts/me');
                 const data = await response.json();
-                if (data.success && data.expert) {
+                if (data.success && data.data) {
                     setFormData({
-                        name: data.expert.name || '',
-                        expertise: data.expert.expertise || '',
-                        session_amount_icp: data.expert.session_amount_icp?.toString() || '',
-                        calendly_link: data.expert.calendly_link || '',
-                        description: data.expert.description || '',
-                        picture_url: data.expert.picture_url || ''
+                        headline: data.data.headline || '',
+                        expertise: (data.data.expertise || []).join(', '),
+                        hourlyRate: data.data.hourly_rate_minor
+                            ? toMajorUnits(data.data.hourly_rate_minor, data.data.currency).toString()
+                            : '',
+                        bio: data.data.bio || '',
                     });
-                } else {
-                    // Prefill with user profile data if available
-                    setFormData(prev => ({
-                        ...prev,
-                        name: `${profile.firstName} ${profile.lastName}`.trim(),
-                        picture_url: profile.profileImage || ''
-                    }));
                 }
             } catch (error) {
                 console.error('Error fetching expert profile:', error);
@@ -54,7 +45,7 @@ export default function ExpertRegistration() {
         };
 
         fetchExpertProfile();
-    }, [profile]);
+    }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -66,20 +57,24 @@ export default function ExpertRegistration() {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/expert/register', {
+            const response = await fetch('/api/experts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    headline: formData.headline,
+                    bio: formData.bio,
+                    expertise: formData.expertise.split(',').map((s) => s.trim()).filter(Boolean),
+                    hourly_rate_minor: toMinorUnits(formData.hourlyRate),
+                }),
             });
 
             const data = await response.json();
 
             if (data.success) {
-                toast.success('Expert profile updated successfully!');
-                await refreshProfile();
+                toast.success('Expert profile saved!');
                 router.push('/expert/dashboard');
             } else {
-                toast.error(data.error || 'Failed to update profile');
+                toast.error(data.error || 'Failed to save profile');
             }
         } catch (error) {
             console.error('Registration error:', error);
@@ -110,7 +105,7 @@ export default function ExpertRegistration() {
                         Browse Experts
                     </Button>
                     <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Become an Expert</h1>
-                    <p className="text-gray-600 text-lg">Share your knowledge and earn ICP by helping others.</p>
+                    <p className="text-gray-600 text-lg">Share your knowledge and get paid for 1:1 sessions.</p>
                 </div>
 
                 <Card>
@@ -119,42 +114,21 @@ export default function ExpertRegistration() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="flex flex-col items-center mb-6">
-                                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-2 border-purple-100 mb-4">
-                                    {formData.picture_url ? (
-                                        <img src={formData.picture_url} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-full h-full p-4 text-gray-400" />
-                                    )}
-                                </div>
-                                <p className="text-sm text-gray-500">Profile picture synced from settings</p>
-                            </div>
+                            <p className="text-sm text-gray-500 -mt-2">
+                                Your name and photo come from your account profile.
+                            </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium flex items-center gap-2">
-                                        <User size={16} className="text-purple-600" />
-                                        Full Name
-                                    </label>
-                                    <Input
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        placeholder="e.g. John Doe"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center gap-2">
                                         <Award size={16} className="text-purple-600" />
-                                        Primary Expertise
+                                        Headline
                                     </label>
                                     <Input
-                                        name="expertise"
-                                        value={formData.expertise}
+                                        name="headline"
+                                        value={formData.headline}
                                         onChange={handleChange}
-                                        placeholder="e.g. Blockchain Development"
+                                        placeholder="e.g. Senior Growth Strategist"
                                         required
                                     />
                                 </div>
@@ -162,32 +136,32 @@ export default function ExpertRegistration() {
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium flex items-center gap-2">
                                         <DollarSign size={16} className="text-purple-600" />
-                                        Session Amount (ICP)
+                                        Hourly Rate (USD)
                                     </label>
                                     <Input
-                                        name="session_amount_icp"
+                                        name="hourlyRate"
                                         type="number"
                                         step="0.01"
-                                        value={formData.session_amount_icp}
+                                        min="0"
+                                        value={formData.hourlyRate}
                                         onChange={handleChange}
-                                        placeholder="e.g. 5.00"
+                                        placeholder="e.g. 100.00"
                                         required
                                     />
                                 </div>
+                            </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center gap-2">
-                                        <LinkIcon size={16} className="text-purple-600" />
-                                        Calendly Link
-                                    </label>
-                                    <Input
-                                        name="calendly_link"
-                                        value={formData.calendly_link}
-                                        onChange={handleChange}
-                                        placeholder="calendly.com/your-url"
-                                        required
-                                    />
-                                </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium flex items-center gap-2">
+                                    <Award size={16} className="text-purple-600" />
+                                    Areas of Expertise
+                                </label>
+                                <Input
+                                    name="expertise"
+                                    value={formData.expertise}
+                                    onChange={handleChange}
+                                    placeholder="e.g. Growth Marketing, SEO, Paid Ads (comma separated)"
+                                />
                             </div>
 
                             <div className="space-y-2">
@@ -196,12 +170,22 @@ export default function ExpertRegistration() {
                                     Profile Description
                                 </label>
                                 <Textarea
-                                    name="description"
-                                    value={formData.description}
+                                    name="bio"
+                                    value={formData.bio}
                                     onChange={handleChange}
                                     className="h-32"
                                     placeholder="Tell users why they should book a session with you..."
                                 />
+                            </div>
+
+                            <div className="rounded-xl border border-dashed border-gray-200 p-4 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <Landmark size={18} className="text-purple-600 shrink-0" />
+                                    <span>Set up payouts so you can get paid for booked sessions.</span>
+                                </div>
+                                <Button asChild variant="outline" type="button">
+                                    <Link href="/freelancer/settings/payouts">Set up payouts</Link>
+                                </Button>
                             </div>
 
                             <Button

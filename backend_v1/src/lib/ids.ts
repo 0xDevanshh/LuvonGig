@@ -30,6 +30,7 @@ export const newTransactionId = () => generateId('tx');
 export const newReviewId = () => generateId('rv');
 export const newTimelineEventId = () => generateId('te');
 export const newDisputeId = () => generateId('dsp');
+export const newExpertId = () => generateId('exp');
 
 /** Six-digit numeric OTP, matching the existing email verification flow. */
 export function generateOtp(): string {

@@ -4,24 +4,34 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, Star, Clock, ArrowRight, User } from 'lucide-react';
+import { Search, ArrowRight, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatMoney } from '@/lib/currency';
 
-import { Header1 } from '@/components/Header1';
+interface Expert {
+  id: string;
+  name: string;
+  avatar_url: string;
+  headline: string;
+  bio: string;
+  expertise: string[];
+  hourly_rate_minor: string;
+  currency: string;
+}
 
 export default function ExpertsMarketplace() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
-    const [experts, setExperts] = useState<any[]>([]);
+    const [experts, setExperts] = useState<Expert[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         const fetchExperts = async () => {
             try {
-                const response = await fetch('/api/expert/list');
+                const response = await fetch('/api/experts');
                 const data = await response.json();
                 if (data.success) {
-                    setExperts(data.experts);
+                    setExperts(data.data);
                 } else {
                     toast.error('Failed to load experts');
                 }
@@ -36,9 +46,11 @@ export default function ExpertsMarketplace() {
         fetchExperts();
     }, []);
 
+    const query = searchQuery.toLowerCase();
     const filteredExperts = experts.filter(expert =>
-        expert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        expert.expertise.toLowerCase().includes(searchQuery.toLowerCase())
+        expert.name.toLowerCase().includes(query) ||
+        expert.headline.toLowerCase().includes(query) ||
+        expert.expertise.some((e) => e.toLowerCase().includes(query))
     );
 
     return (
@@ -85,8 +97,8 @@ export default function ExpertsMarketplace() {
                                 <div className="relative h-48 bg-gradient-to-br from-purple-100 to-blue-50">
                                     <div className="absolute bottom-0 left-6 translate-y-1/2">
                                         <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white bg-white shadow-lg">
-                                            {expert.picture_url ? (
-                                                <img src={expert.picture_url} alt={expert.name} className="w-full h-full object-cover" />
+                                            {expert.avatar_url ? (
+                                                <img src={expert.avatar_url} alt={expert.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-gray-100">
                                                     <User className="text-gray-300" size={32} />
@@ -102,18 +114,20 @@ export default function ExpertsMarketplace() {
                                             {expert.name}
                                         </h3>
                                         <p className="text-sm font-medium text-purple-600 bg-purple-50 inline-block px-3 py-1 rounded-full mt-2">
-                                            {expert.expertise}
+                                            {expert.expertise.join(', ') || expert.headline}
                                         </p>
                                     </div>
 
                                     <p className="text-gray-500 text-sm line-clamp-2 mb-6">
-                                        {expert.description || "Top-rated expert providing specialized sessions and guidance."}
+                                        {expert.bio || "Top-rated expert providing specialized sessions and guidance."}
                                     </p>
 
                                     <div className="flex items-center justify-between pt-6 border-t border-gray-100">
                                         <div>
                                             <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Session Rate</p>
-                                            <p className="text-lg font-bold text-gray-900">{parseFloat(expert.session_amount_icp).toFixed(2)} ICP</p>
+                                            <p className="text-lg font-bold text-gray-900">
+                                                {formatMoney(expert.hourly_rate_minor, expert.currency)}/hr
+                                            </p>
                                         </div>
                                         <Button
                                             className="bg-gray-900 hover:bg-purple-600 text-white rounded-xl px-6 group"

@@ -3,14 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useUserContext } from '@/contexts/UserContext';
 import {
     Users,
     Calendar,
     DollarSign,
-    TrendingUp,
     ExternalLink,
-    Plus,
     Settings,
     UserCheck,
     Star,
@@ -18,31 +15,53 @@ import {
     Search,
     Clock
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { formatMoney } from '@/lib/currency';
+
+interface Expert {
+    id: string;
+    name: string;
+    avatar_url: string;
+    headline: string;
+    expertise: string[];
+    hourly_rate_minor: string;
+    currency: string;
+}
+
+interface Booking {
+    id: string;
+    scheduled_at: string;
+    amount_minor: string;
+    currency: string;
+    status: string;
+    client_email?: string;
+    expert_name?: string;
+    expert_headline?: string;
+    expert_avatar_url?: string;
+}
 
 export default function ExpertDashboard() {
     const router = useRouter();
-    const { profile } = useUserContext();
     const [loading, setLoading] = useState(true);
-    const [data, setData] = useState<any>(null);
-    const [myBookings, setMyBookings] = useState<any[]>([]);
+    const [expert, setExpert] = useState<Expert | null>(null);
+    const [sales, setSales] = useState<Booking[]>([]);
+    const [myBookings, setMyBookings] = useState<Booking[]>([]);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch Expert Stats
-                const statsRes = await fetch('/api/expert/dashboard/stats');
-                const statsResult = await statsRes.json();
-                if (statsResult.success) {
-                    setData(statsResult);
+                const expertRes = await fetch('/api/experts/me');
+                const expertResult = await expertRes.json();
+                if (expertResult.success) {
+                    setExpert(expertResult.data);
+
+                    const salesRes = await fetch('/api/expert-bookings?role=expert');
+                    const salesResult = await salesRes.json();
+                    if (salesResult.success) setSales(salesResult.data);
                 }
 
-                // Fetch User's own bookings
-                const bookingsRes = await fetch('/api/expert/my-bookings');
+                const bookingsRes = await fetch('/api/expert-bookings?role=client');
                 const bookingsResult = await bookingsRes.json();
-                if (bookingsResult.success) {
-                    setMyBookings(bookingsResult.bookings);
-                }
+                if (bookingsResult.success) setMyBookings(bookingsResult.data);
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
             } finally {
@@ -51,7 +70,7 @@ export default function ExpertDashboard() {
         };
 
         fetchDashboardData();
-    }, [router]);
+    }, []);
 
     if (loading) {
         return (
@@ -61,8 +80,8 @@ export default function ExpertDashboard() {
         );
     }
 
-    const stats = data?.stats || { bookingCount: 0, customerCount: 0, recentCustomers: [] };
-    const expert = data?.expert;
+    const totalEarnedMinor = sales.reduce((sum, s) => sum + BigInt(s.amount_minor), BigInt(0));
+    const customerCount = new Set(sales.map((s) => s.client_email)).size;
 
     return (
         <div className="p-8 space-y-10">
@@ -83,7 +102,7 @@ export default function ExpertDashboard() {
                         </div>
                         <h2 className="text-2xl font-bold text-gray-900 mb-2">Want to see your Expert Stats?</h2>
                         <p className="text-gray-600 max-w-lg mb-8 leading-relaxed">
-                            It looks like you haven't registered as an expert yet. Share your knowledge, help others, and earn ICP by setting up your expert profile.
+                            It looks like you haven't registered as an expert yet. Share your knowledge, help others, and get paid by setting up your expert profile.
                         </p>
                         <Button
                             onClick={() => router.push('/expert/register')}
@@ -107,7 +126,7 @@ export default function ExpertDashboard() {
                                     <span className="text-xs font-bold text-purple-600 bg-purple-50 px-3 py-1 rounded-full uppercase">Sold</span>
                                 </div>
                                 <h3 className="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">Total Bookings</h3>
-                                <p className="text-4xl font-black text-gray-900">{stats.bookingCount}</p>
+                                <p className="text-4xl font-black text-gray-900">{sales.length}</p>
                             </CardContent>
                         </Card>
 
@@ -120,7 +139,7 @@ export default function ExpertDashboard() {
                                     <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full uppercase">Reach</span>
                                 </div>
                                 <h3 className="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">Total Customers</h3>
-                                <p className="text-4xl font-black text-gray-900">{stats.customerCount}</p>
+                                <p className="text-4xl font-black text-gray-900">{customerCount}</p>
                             </CardContent>
                         </Card>
 
@@ -132,8 +151,8 @@ export default function ExpertDashboard() {
                                     </div>
                                     <span className="text-xs font-bold text-purple-400 bg-white/5 px-3 py-1 rounded-full uppercase">Earnings</span>
                                 </div>
-                                <h3 className="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">Total ICP Earned</h3>
-                                <p className="text-4xl font-black">{(stats.bookingCount * (expert?.session_amount_icp || 0)).toFixed(2)}</p>
+                                <h3 className="text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wider">Total Earned</h3>
+                                <p className="text-4xl font-black">{formatMoney(totalEarnedMinor.toString(), expert.currency)}</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -149,7 +168,7 @@ export default function ExpertDashboard() {
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    {stats.recentCustomers.length > 0 ? (
+                                    {sales.length > 0 ? (
                                         <div className="overflow-x-auto">
                                             <table className="w-full">
                                                 <thead>
@@ -160,11 +179,11 @@ export default function ExpertDashboard() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-50">
-                                                    {stats.recentCustomers.map((c: any, i: number) => (
-                                                        <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                                                    {sales.map((c) => (
+                                                        <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                                                             <td className="px-8 py-5 font-bold text-gray-900">{c.client_email}</td>
-                                                            <td className="px-8 py-5 text-purple-600 font-black">{parseFloat(c.amount_icp).toFixed(2)} ICP</td>
-                                                            <td className="px-8 py-5 text-gray-400 text-sm">{new Date(c.created_at).toLocaleDateString()}</td>
+                                                            <td className="px-8 py-5 text-purple-600 font-black">{formatMoney(c.amount_minor, c.currency)}</td>
+                                                            <td className="px-8 py-5 text-gray-400 text-sm">{new Date(c.scheduled_at).toLocaleDateString()}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -190,11 +209,11 @@ export default function ExpertDashboard() {
                                     <div className="space-y-6">
                                         <div className="flex items-center gap-4">
                                             <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center overflow-hidden">
-                                                {expert.picture_url ? <img src={expert.picture_url} className="w-full h-full object-cover" /> : <Star className="text-purple-600" />}
+                                                {expert.avatar_url ? <img src={expert.avatar_url} className="w-full h-full object-cover" alt={expert.name} /> : <Star className="text-purple-600" />}
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-gray-900">{expert.name}</h4>
-                                                <p className="text-sm text-purple-600 font-medium">{expert.expertise}</p>
+                                                <p className="text-sm text-purple-600 font-medium">{expert.headline}</p>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
@@ -209,9 +228,9 @@ export default function ExpertDashboard() {
                                             <Button
                                                 variant="outline"
                                                 className="w-full justify-between rounded-xl hover:bg-gray-50 group"
-                                                onClick={() => window.open(expert.calendly_link, '_blank')}
+                                                onClick={() => router.push('/freelancer/settings/payouts')}
                                             >
-                                                <span className="flex items-center gap-2 font-semibold"><ExternalLink size={18} /> Calendly Page</span>
+                                                <span className="flex items-center gap-2 font-semibold"><ExternalLink size={18} /> Payout Settings</span>
                                                 <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
                                             </Button>
                                         </div>
@@ -243,30 +262,24 @@ export default function ExpertDashboard() {
                                             <th className="px-8 py-4">Topic</th>
                                             <th className="px-8 py-4">Status</th>
                                             <th className="px-8 py-4">Amount</th>
-                                            <th className="px-8 py-4 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
-                                        {myBookings.map((b: any, i: number) => (
-                                            <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                                        {myBookings.map((b) => (
+                                            <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-8 py-5">
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden">
-                                                            {b.expert_picture ? <img src={b.expert_picture} className="w-full h-full object-cover" /> : <UserCheck size={20} className="text-gray-400" />}
+                                                            {b.expert_avatar_url ? <img src={b.expert_avatar_url} className="w-full h-full object-cover" alt={b.expert_name} /> : <UserCheck size={20} className="text-gray-400" />}
                                                         </div>
                                                         <span className="font-bold text-gray-900">{b.expert_name}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-8 py-5"><span className="text-sm font-medium text-gray-600">{b.expert_expertise}</span></td>
+                                                <td className="px-8 py-5"><span className="text-sm font-medium text-gray-600">{b.expert_headline}</span></td>
                                                 <td className="px-8 py-5">
-                                                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter">Confirmed</span>
+                                                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-tighter">{b.status}</span>
                                                 </td>
-                                                <td className="px-8 py-5 text-gray-900 font-bold">{parseFloat(b.amount_icp).toFixed(2)} ICP</td>
-                                                <td className="px-8 py-5 text-right">
-                                                    <Button variant="ghost" size="sm" className="text-purple-600 hover:bg-purple-50 rounded-xl">
-                                                        Check Email
-                                                    </Button>
-                                                </td>
+                                                <td className="px-8 py-5 text-gray-900 font-bold">{formatMoney(b.amount_minor, b.currency)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
